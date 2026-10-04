@@ -23,7 +23,7 @@ export class WorldManager implements ChunkNeighborAccessor {
   public waterMaterial: THREE.MeshStandardMaterial;
 
   public renderDistance: number = 3; // Fast, smooth default radius (7x7 chunks)
-  public dimension: 'overworld' | 'nether' | 'sift' = 'overworld';
+  public dimension: 'overworld' | 'nether' = 'overworld';
 
   // Dynamic Torch PointLights (emit light around 20 blocks)
   public torchLights: Map<string, THREE.PointLight> = new Map();
@@ -236,14 +236,9 @@ export class WorldManager implements ChunkNeighborAccessor {
       if (this.chunks.has(key)) continue;
 
       // Generate voxel data based on current dimension
-      let voxels: Uint8Array;
-      if (this.dimension === 'nether') {
-        voxels = this.generator.generateNetherChunk(item.cx, item.cz);
-      } else if (this.dimension === 'sift') {
-        voxels = this.generator.generateSiftChunk(item.cx, item.cz);
-      } else {
-        voxels = this.generator.generateChunkData(item.cx, item.cz);
-      }
+      const voxels = this.dimension === 'nether'
+        ? this.generator.generateNetherChunk(item.cx, item.cz)
+        : this.generator.generateChunkData(item.cx, item.cz);
       const chunk = new Chunk(item.cx, item.cz, voxels);
       this.chunks.set(key, chunk);
 
@@ -429,8 +424,8 @@ export class WorldManager implements ChunkNeighborAccessor {
     this.loadQueue = [];
   }
 
-  // Switch between Overworld, Nether, and Sift dimensions
-  public switchDimension(target: 'overworld' | 'nether' | 'sift') {
+  // Switch between Overworld and Nether dimensions
+  public switchDimension(target: 'overworld' | 'nether') {
     this.clearAll();
     this.dimension = target;
   }

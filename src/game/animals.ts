@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { WorldManager } from './world';
 import { soundEngine } from './audio';
 
-export type AnimalType = 'pig' | 'cow' | 'sheep' | 'chicken' | 'frog' | 'sift_bunny';
+export type AnimalType = 'pig' | 'cow' | 'sheep' | 'chicken' | 'frog';
 
 interface AnimalInstance {
   type: AnimalType;

@@ -170,15 +170,6 @@ export class WorldGenerator {
   }
 
   /**
-   * Identifies cold subterranean zones for Frozen Ice Caves.
-   */
-  public isFrozenCave(x: number, y: number, z: number): boolean {
-    if (y < 8 || y > 50) return false;
-    const coldNoise = this.noise.noise3D(x * 0.018 + 500, y * 0.024 + 500, z * 0.018 + 500);
-    return coldNoise > 0.36;
-  }
-
-  /**
    * Generates a 3D overworld chunk.
    */
   public generateChunkData(chunkX: number, chunkZ: number): Uint8Array {
@@ -276,47 +267,20 @@ export class WorldGenerator {
               this.setVoxel(voxels, lx, y, lz, BlockType.DIRT);
             }
           } else {
-            // Deep stone, veins & ores
+            // Deep stone & ores
             let block = BlockType.STONE;
+            const oreNoise = this.noise.noise3D(wx * 0.12, y * 0.12, wz * 0.12);
 
-            // 1. Granite, Andesite, Diorite Veins around cave systems (20-30 block clusters)
-            const veinScale = 0.058;
-            const gNoise = this.noise.noise3D(wx * veinScale + 120, y * (veinScale * 1.2) + 120, wz * veinScale + 120);
-            const dNoise = this.noise.noise3D(wx * veinScale + 340, y * (veinScale * 1.2) + 340, wz * veinScale + 340);
-            const aNoise = this.noise.noise3D(wx * veinScale + 560, y * (veinScale * 1.2) + 560, wz * veinScale + 560);
-
-            if (gNoise > 0.62) {
-              block = BlockType.GRANITE;
-            } else if (dNoise > 0.62) {
-              block = BlockType.DIORITE;
-            } else if (aNoise > 0.62) {
-              block = BlockType.ANDESITE;
-            } else {
-              // 2. Ores
-              const oreNoise = this.noise.noise3D(wx * 0.12, y * 0.12, wz * 0.12);
-              if (y <= 16 && oreNoise > 0.68) {
-                block = BlockType.DIAMOND_ORE;
-              } else if (y <= 24 && oreNoise > 0.65) {
-                block = BlockType.GOLD_ORE;
-              } else if (y <= 32 && oreNoise > 0.62) {
-                block = BlockType.EMERALD_ORE;
-              } else if (y <= 50 && oreNoise > 0.54) {
-                block = BlockType.IRON_ORE;
-              } else if (oreNoise > 0.52) {
-                block = BlockType.COAL_ORE;
-              }
-            }
-
-            // 3. Frozen Ice Cave Transformation (like in the second and third images)
-            if (this.isFrozenCave(wx, y, wz)) {
-              const iceNoise = this.noise.noise3D(wx * 0.08, y * 0.08, wz * 0.08);
-              if (iceNoise > 0.15) {
-                block = BlockType.PACKED_ICE;
-              } else if (iceNoise > -0.2) {
-                block = BlockType.ICE;
-              } else {
-                block = BlockType.SNOW_BLOCK;
-              }
+            if (y <= 16 && oreNoise > 0.68) {
+              block = BlockType.DIAMOND_ORE;
+            } else if (y <= 24 && oreNoise > 0.65) {
+              block = BlockType.GOLD_ORE;
+            } else if (y <= 32 && oreNoise > 0.62) {
+              block = BlockType.EMERALD_ORE;
+            } else if (y <= 50 && oreNoise > 0.54) {
+              block = BlockType.IRON_ORE;
+            } else if (oreNoise > 0.52) {
+              block = BlockType.COAL_ORE;
             }
 
             this.setVoxel(voxels, lx, y, lz, block);
@@ -385,41 +349,14 @@ export class WorldGenerator {
           }
         }
 
-        // Subterranean features: Frozen Ice Cave Icicles & Stalagmites, Glowing Mushrooms
-        for (let y = 6; y < 48; y++) {
+        // Subterranean glowing mushrooms inside caves
+        for (let y = 6; y < 40; y++) {
           if (this.getVoxel(voxels, lx, y, lz) === BlockType.AIR) {
-            const blockAbove = this.getVoxel(voxels, lx, y + 1, lz);
             const blockBelow = this.getVoxel(voxels, lx, y - 1, lz);
-
-            // Frozen Ice Cave features: Icicles hanging from ceiling & stalagmites from ground!
-            if (this.isFrozenCave(wx, y, wz)) {
-              if (blockAbove === BlockType.PACKED_ICE || blockAbove === BlockType.ICE || blockAbove === BlockType.STONE) {
-                const icicleNoise = this.noise.noise3D(wx * 0.25, y * 0.25, wz * 0.25);
-                if (icicleNoise > 0.52) {
-                  const icicleLen = Math.floor(Math.abs(icicleNoise) * 4) + 1;
-                  for (let iy = 0; iy < icicleLen; iy++) {
-                    if (y - iy > 6 && this.getVoxel(voxels, lx, y - iy, lz) === BlockType.AIR) {
-                      this.setVoxel(voxels, lx, y - iy, lz, BlockType.BLUE_ICICLE);
-                    }
-                  }
-                }
-              }
-              if (blockBelow === BlockType.PACKED_ICE || blockBelow === BlockType.ICE || blockBelow === BlockType.SNOW_BLOCK) {
-                const spikeNoise = this.noise.noise3D(wx * 0.22 + 70, y * 0.22 + 70, wz * 0.22 + 70);
-                if (spikeNoise > 0.62) {
-                  this.setVoxel(voxels, lx, y, lz, BlockType.PACKED_ICE);
-                  if (spikeNoise > 0.76 && this.getVoxel(voxels, lx, y + 1, lz) === BlockType.AIR) {
-                    this.setVoxel(voxels, lx, y + 1, lz, BlockType.PACKED_ICE);
-                  }
-                }
-              }
-            } else {
-              // Normal cave glowing mushrooms
-              if (blockBelow === BlockType.STONE || blockBelow === BlockType.DIRT) {
-                const shroomNoise = this.noise.noise3D(wx * 0.4, y * 0.4, wz * 0.4);
-                if (shroomNoise > 0.76) {
-                  this.setVoxel(voxels, lx, y, lz, BlockType.MUSHROOM);
-                }
+            if (blockBelow === BlockType.STONE || blockBelow === BlockType.DIRT) {
+              const shroomNoise = this.noise.noise3D(wx * 0.4, y * 0.4, wz * 0.4);
+              if (shroomNoise > 0.76) {
+                this.setVoxel(voxels, lx, y, lz, BlockType.MUSHROOM);
               }
             }
           }
@@ -502,116 +439,6 @@ export class WorldGenerator {
     }
 
     return voxels;
-  }
-
-  /**
-   * Generates a 3D "The Sift" floating island dimension chunk.
-   * Floating islands with pink Siftstone, pink Willow Bushes, white Willow Trees (Willow Log + Willow Leaves).
-   */
-  public generateSiftChunk(chunkX: number, chunkZ: number): Uint8Array {
-    const voxels = new Uint8Array(CHUNK_SIZE_X * CHUNK_SIZE_Z * CHUNK_SIZE_Y);
-    const worldStartX = chunkX * CHUNK_SIZE_X;
-    const worldStartZ = chunkZ * CHUNK_SIZE_Z;
-
-    for (let lz = 0; lz < CHUNK_SIZE_Z; lz++) {
-      for (let lx = 0; lx < CHUNK_SIZE_X; lx++) {
-        const wx = worldStartX + lx;
-        const wz = worldStartZ + lz;
-
-        // Origin guaranteed spawn island at (0, 0)
-        const distOrigin = Math.sqrt(wx * wx + wz * wz);
-        const isSpawnIsland = distOrigin < 24;
-
-        let topSolidY = -1;
-
-        for (let y = 16; y < 85; y++) {
-          let isSolid = false;
-
-          if (isSpawnIsland) {
-            // Flat, beautiful floating spawn island with gentle rolling edges
-            const spawnBase = 52 + Math.sin(wx * 0.2) * Math.cos(wz * 0.2) * 2;
-            const bottomTaper = 52 - Math.max(0, (24 - distOrigin) * 0.75);
-            if (y >= bottomTaper && y <= spawnBase) {
-              isSolid = true;
-            }
-          } else {
-            // Procedural floating islands
-            const islandDensity = this.noise.fbm3D(wx * 0.032, y * 0.045, wz * 0.032, 3, 2.0, 0.5);
-            const distCenter = Math.abs(y - 52);
-            const heightEnvelope = 1.0 - (distCenter / 19); // envelope between 33 and 71
-            const density = islandDensity * 1.5 + heightEnvelope * 1.1 - 0.42;
-
-            if (density > 0) {
-              isSolid = true;
-            }
-          }
-
-          if (isSolid) {
-            this.setVoxel(voxels, lx, y, lz, BlockType.STONE);
-            topSolidY = y;
-          }
-        }
-
-        // Apply Siftstone strata & foliage once island column is carved
-        if (topSolidY > 0) {
-          // Surface is pink SIFTSTONE
-          this.setVoxel(voxels, lx, topSolidY, lz, BlockType.SIFTSTONE);
-
-          // 2 layers below surface are SIFTSTONE as well
-          if (topSolidY - 1 >= 0 && this.getVoxel(voxels, lx, topSolidY - 1, lz) !== BlockType.AIR) {
-            this.setVoxel(voxels, lx, topSolidY - 1, lz, BlockType.SIFTSTONE);
-          }
-          if (topSolidY - 2 >= 0 && this.getVoxel(voxels, lx, topSolidY - 2, lz) !== BlockType.AIR) {
-            this.setVoxel(voxels, lx, topSolidY - 2, lz, BlockType.SIFTSTONE);
-          }
-
-          // Foliage on top of islands:
-          if (topSolidY + 1 < CHUNK_SIZE_Y) {
-            const vegNoise = this.noise.noise2D(wx * 0.28 + 42, wz * 0.28 + 42);
-            if (vegNoise > -0.15) {
-              // 55% coverage of vibrant pink Willow Bush as shown in user's image 1!
-              this.setVoxel(voxels, lx, topSolidY + 1, lz, BlockType.WILLOW_BUSH);
-            }
-
-            // White Willow Trees (Willow Log + Willow Leaves)
-            if (lx >= 2 && lx <= 13 && lz >= 2 && lz <= 13) {
-              const treeNoise = Math.abs(this.noise.noise2D(wx * 0.42 + 91, wz * 0.42 + 91));
-              if (treeNoise > 0.86) {
-                this.generateWillowTree(voxels, lx, topSolidY + 1, lz);
-              }
-            }
-          }
-        }
-      }
-    }
-
-    return voxels;
-  }
-
-  // White Willow Tree for The Sift dimension
-  public generateWillowTree(voxels: Uint8Array, x: number, y: number, z: number) {
-    const trunkHeight = 6;
-    for (let ty = 0; ty < trunkHeight; ty++) {
-      if (y + ty < CHUNK_SIZE_Y) {
-        this.setVoxel(voxels, x, y + ty, z, BlockType.WILLOW_LOG);
-      }
-    }
-    const leafStart = y + trunkHeight - 2;
-    for (let ly = leafStart; ly <= leafStart + 3; ly++) {
-      if (ly >= CHUNK_SIZE_Y) break;
-      const radius = ly >= leafStart + 2 ? 1 : 2;
-      for (let ox = -radius; ox <= radius; ox++) {
-        for (let oz = -radius; oz <= radius; oz++) {
-          const vx = x + ox;
-          const vz = z + oz;
-          if (ox === 0 && oz === 0 && ly < y + trunkHeight) continue;
-          if (Math.abs(ox) === 2 && Math.abs(oz) === 2 && ly === leafStart + 1) continue;
-          if (this.getVoxel(voxels, vx, ly, vz) === BlockType.AIR) {
-            this.setVoxel(voxels, vx, ly, vz, BlockType.WILLOW_LEAVES);
-          }
-        }
-      }
-    }
   }
 
   /**
