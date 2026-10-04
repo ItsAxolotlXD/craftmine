@@ -4,20 +4,27 @@ import { Play, Settings, LogOut, RotateCcw } from 'lucide-react';
 interface MainMenuProps {
   onStartGame: () => void;
   onOpenSettings: () => void;
+  hasWorldStarted?: boolean;
+  onNewWorld?: () => void;
 }
 
-export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onOpenSettings }) => {
+export const MainMenu: React.FC<MainMenuProps> = ({
+  onStartGame,
+  onOpenSettings,
+  hasWorldStarted = false,
+  onNewWorld,
+}) => {
   const [showQuitDialog, setShowQuitDialog] = useState(false);
 
   return (
-    <div className="absolute inset-0 z-40 flex flex-col justify-between items-center select-none bg-black/55 backdrop-blur-xs p-6 text-white overflow-hidden">
+    <div className="absolute inset-0 z-40 flex flex-col justify-between items-center select-none bg-black/65 backdrop-blur-xs p-6 text-white overflow-hidden">
       {/* Subtle dirt/stone patterned vignette overlay */}
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.3)_0%,rgba(0,0,0,0.85)_100%)]" />
 
       {/* Top spacer */}
       <div className="w-full flex justify-between items-center text-xs text-gray-400 font-mono tracking-wider pt-2 z-10">
         <span>Infinite 3D Voxel Engine</span>
-        <span className="text-emerald-400 font-semibold">Creative & Flying Enabled</span>
+        <span className="text-emerald-400 font-semibold">New Biomes · Structures · Tools</span>
       </div>
 
       {/* Center Container: Logo & Buttons */}
@@ -37,37 +44,48 @@ export const MainMenu: React.FC<MainMenuProps> = ({ onStartGame, onOpenSettings 
           {/* Yellow Minecraft Splash Text */}
           <div className="absolute -bottom-3 right-0 transform rotate-[-12deg] animate-pulse">
             <span className="bg-yellow-400 text-black px-2 py-0.5 text-xs sm:text-sm font-black tracking-wide rounded-xs shadow-lg uppercase">
-              Now with Infinite Oceans!
+              Desert & Mangrove Forests!
             </span>
           </div>
         </div>
 
         {/* <buttons> */}
         <div className="w-full space-y-3 px-4">
-          {/* Create New World */}
+          {/* Primary Action Button */}
           <button
             onClick={onStartGame}
-            className="w-full py-3.5 px-6 bg-[#666666] hover:bg-[#777777] active:bg-[#555555] text-white font-bold text-base sm:text-lg rounded-xs border-2 border-t-[#aaaaaa] border-l-[#aaaaaa] border-r-[#333333] border-b-[#333333] shadow-xl flex items-center justify-center gap-3 transition-all active:translate-y-0.5 tracking-wider uppercase cursor-pointer"
+            className="w-full py-3.5 px-6 bg-[#555555] hover:bg-[#666666] active:bg-[#444444] text-white font-bold text-base sm:text-lg rounded-xs border-2 border-t-[#aaaaaa] border-l-[#aaaaaa] border-r-[#222222] border-b-[#222222] shadow-xl flex items-center justify-center gap-3 transition-all active:translate-y-0.5 tracking-wider uppercase cursor-pointer"
           >
             <Play size={20} className="fill-white" />
-            <span>Create New World</span>
+            <span>{hasWorldStarted ? 'Back to Game' : 'Play World'}</span>
           </button>
+
+          {/* New World Button (if world already started) */}
+          {hasWorldStarted && onNewWorld && (
+            <button
+              onClick={onNewWorld}
+              className="w-full py-3 px-6 bg-[#555555] hover:bg-[#666666] active:bg-[#444444] text-white font-bold text-sm sm:text-base rounded-xs border-2 border-t-[#aaaaaa] border-l-[#aaaaaa] border-r-[#222222] border-b-[#222222] shadow-xl flex items-center justify-center gap-3 transition-all active:translate-y-0.5 tracking-wider uppercase cursor-pointer"
+            >
+              <RotateCcw size={18} />
+              <span>Create New World</span>
+            </button>
+          )}
 
           {/* Settings */}
           <button
             onClick={onOpenSettings}
-            className="w-full py-3.5 px-6 bg-[#666666] hover:bg-[#777777] active:bg-[#555555] text-white font-bold text-base sm:text-lg rounded-xs border-2 border-t-[#aaaaaa] border-l-[#aaaaaa] border-r-[#333333] border-b-[#333333] shadow-xl flex items-center justify-center gap-3 transition-all active:translate-y-0.5 tracking-wider uppercase cursor-pointer"
+            className="w-full py-3 px-6 bg-[#555555] hover:bg-[#666666] active:bg-[#444444] text-white font-bold text-sm sm:text-base rounded-xs border-2 border-t-[#aaaaaa] border-l-[#aaaaaa] border-r-[#222222] border-b-[#222222] shadow-xl flex items-center justify-center gap-3 transition-all active:translate-y-0.5 tracking-wider uppercase cursor-pointer"
           >
-            <Settings size={20} />
+            <Settings size={18} />
             <span>Settings</span>
           </button>
 
           {/* Quit and Close */}
           <button
             onClick={() => setShowQuitDialog(true)}
-            className="w-full py-3.5 px-6 bg-[#666666] hover:bg-[#777777] active:bg-[#555555] text-white font-bold text-base sm:text-lg rounded-xs border-2 border-t-[#aaaaaa] border-l-[#aaaaaa] border-r-[#333333] border-b-[#333333] shadow-xl flex items-center justify-center gap-3 transition-all active:translate-y-0.5 tracking-wider uppercase cursor-pointer"
+            className="w-full py-3 px-6 bg-[#555555] hover:bg-[#666666] active:bg-[#444444] text-white font-bold text-sm sm:text-base rounded-xs border-2 border-t-[#aaaaaa] border-l-[#aaaaaa] border-r-[#222222] border-b-[#222222] shadow-xl flex items-center justify-center gap-3 transition-all active:translate-y-0.5 tracking-wider uppercase cursor-pointer"
           >
-            <LogOut size={20} />
+            <LogOut size={18} />
             <span>Quit and Close</span>
           </button>
         </div>

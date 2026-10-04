@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { WorldManager } from './world';
 import { soundEngine } from './audio';
 
-export type AnimalType = 'pig' | 'cow' | 'sheep' | 'chicken';
+export type AnimalType = 'pig' | 'cow' | 'sheep' | 'chicken' | 'frog' | 'sift_bunny';
 
 interface AnimalInstance {
   type: AnimalType;
@@ -218,6 +218,74 @@ export class AnimalManager {
         legs.push(legR);
         break;
       }
+
+      case 'frog': {
+        const frogGreenMat = new THREE.MeshLambertMaterial({ color: 0x557a2b });
+        const frogBellyMat = new THREE.MeshLambertMaterial({ color: 0x8fad3d });
+        const eyeMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+        const eyeRimMat = new THREE.MeshLambertMaterial({ color: 0xfacc15 });
+
+        // Body
+        const bodyGeo = new THREE.BoxGeometry(0.5, 0.3, 0.55);
+        const body = new THREE.Mesh(bodyGeo, frogGreenMat);
+        body.position.y = 0.22;
+        group.add(body);
+
+        // Belly
+        const bellyGeo = new THREE.BoxGeometry(0.38, 0.08, 0.42);
+        const belly = new THREE.Mesh(bellyGeo, frogBellyMat);
+        belly.position.set(0, 0.12, 0);
+        group.add(belly);
+
+        // Head
+        const headGeo = new THREE.BoxGeometry(0.44, 0.22, 0.35);
+        head = new THREE.Mesh(headGeo, frogGreenMat);
+        head.position.set(0, 0.32, 0.28);
+        group.add(head);
+
+        // Big prominent frog eyes
+        const eyeBulgeGeo = new THREE.BoxGeometry(0.12, 0.12, 0.12);
+        const eyePupilGeo = new THREE.BoxGeometry(0.06, 0.06, 0.06);
+
+        const eyeL = new THREE.Mesh(eyeBulgeGeo, eyeRimMat);
+        eyeL.position.set(-0.16, 0.12, 0.05);
+        const pupilL = new THREE.Mesh(eyePupilGeo, eyeMat);
+        pupilL.position.set(0, 0, 0.04);
+        eyeL.add(pupilL);
+        head.add(eyeL);
+
+        const eyeR = new THREE.Mesh(eyeBulgeGeo, eyeRimMat);
+        eyeR.position.set(0.16, 0.12, 0.05);
+        const pupilR = new THREE.Mesh(eyePupilGeo, eyeMat);
+        pupilR.position.set(0, 0, 0.04);
+        eyeR.add(pupilR);
+        head.add(eyeR);
+
+        // Front Legs
+        const frontLegGeo = new THREE.BoxGeometry(0.08, 0.18, 0.08);
+        const flL = new THREE.Mesh(frontLegGeo, frogGreenMat);
+        flL.position.set(-0.2, 0.1, 0.2);
+        group.add(flL);
+        legs.push(flL);
+
+        const flR = new THREE.Mesh(frontLegGeo, frogGreenMat);
+        flR.position.set(0.2, 0.1, 0.2);
+        group.add(flR);
+        legs.push(flR);
+
+        // Folded Hind Legs
+        const hindLegGeo = new THREE.BoxGeometry(0.14, 0.22, 0.22);
+        const hlL = new THREE.Mesh(hindLegGeo, frogGreenMat);
+        hlL.position.set(-0.24, 0.14, -0.16);
+        group.add(hlL);
+        legs.push(hlL);
+
+        const hlR = new THREE.Mesh(hindLegGeo, frogGreenMat);
+        hlR.position.set(0.24, 0.14, -0.16);
+        group.add(hlR);
+        legs.push(hlR);
+        break;
+      }
     }
 
     return { group, head, legs, wings };
@@ -268,9 +336,14 @@ export class AnimalManager {
         const sz = Math.floor(playerPos.z + Math.sin(angle) * dist);
 
         const info = world.generator.getTerrainHeight(sx, sz);
-        if (!info.isOcean && !info.isRiver && info.height >= 38) {
-          const types: AnimalType[] = ['pig', 'cow', 'sheep', 'chicken'];
-          const randomType = types[Math.floor(Math.random() * types.length)];
+        if (!info.isOcean && !info.isRiver && info.height >= 36) {
+          let randomType: AnimalType;
+          if (info.biome === 'mangrove_forest') {
+            randomType = Math.random() < 0.75 ? 'frog' : 'pig';
+          } else {
+            const types: AnimalType[] = ['pig', 'cow', 'sheep', 'chicken'];
+            randomType = types[Math.floor(Math.random() * types.length)];
+          }
           this.spawnAnimal(randomType, sx + 0.5, info.height, sz + 0.5);
         }
       }
@@ -294,7 +367,7 @@ export class AnimalManager {
         a.animTimer += dt * 6.5;
 
         // Move forward
-        const speed = a.type === 'chicken' ? 1.2 : 0.9;
+        const speed = a.type === 'chicken' ? 1.2 : (a.type === 'frog' ? 1.4 : 0.9);
         a.x += -Math.sin(a.currentYaw) * speed * dt;
         a.z += -Math.cos(a.currentYaw) * speed * dt;
 
@@ -302,16 +375,27 @@ export class AnimalManager {
         const h = world.generator.getTerrainHeight(Math.floor(a.x), Math.floor(a.z)).height;
         a.y += (h - a.y) * Math.min(1.0, 10.0 * dt);
 
-        // Leg swing animation
-        const swing = Math.sin(a.animTimer) * 0.45;
-        if (a.legs.length >= 4) {
-          a.legs[0].rotation.x = swing;
-          a.legs[1].rotation.x = -swing;
-          a.legs[2].rotation.x = -swing;
-          a.legs[3].rotation.x = swing;
-        } else if (a.legs.length === 2) {
-          a.legs[0].rotation.x = swing;
-          a.legs[1].rotation.x = -swing;
+        // Frog hopping vs leg swing animation
+        if (a.type === 'frog') {
+          const hop = Math.abs(Math.sin(a.animTimer * 1.8)) * 0.4;
+          a.group.position.set(a.x, a.y + hop, a.z);
+          // Legs stretch during jump
+          a.legs[0].rotation.x = -hop;
+          a.legs[1].rotation.x = -hop;
+          a.legs[2].rotation.x = hop * 1.2;
+          a.legs[3].rotation.x = hop * 1.2;
+        } else {
+          a.group.position.set(a.x, a.y, a.z);
+          const swing = Math.sin(a.animTimer) * 0.45;
+          if (a.legs.length >= 4) {
+            a.legs[0].rotation.x = swing;
+            a.legs[1].rotation.x = -swing;
+            a.legs[2].rotation.x = -swing;
+            a.legs[3].rotation.x = swing;
+          } else if (a.legs.length === 2) {
+            a.legs[0].rotation.x = swing;
+            a.legs[1].rotation.x = -swing;
+          }
         }
 
         // Flapping wings for chicken

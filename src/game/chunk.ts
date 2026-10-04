@@ -159,7 +159,7 @@ export class Chunk {
                 x, wy, z
               );
               waterNormals.push(0, 1, 0,  0, 1, 0,  0, 1, 0,  0, 1, 0);
-              waterUvs.push(u0, v1,  u1, v1,  u1, v0,  u0, v0);
+              waterUvs.push(u0, v0,  u1, v0,  u1, v1,  u0, v1);
               waterColors.push(
                 topLight, topLight, topLight,
                 topLight, topLight, topLight,
@@ -179,7 +179,7 @@ export class Chunk {
                 x, y + 1, z
               );
               normals.push(0, 1, 0,  0, 1, 0,  0, 1, 0,  0, 1, 0);
-              uvs.push(u0, v1,  u1, v1,  u1, v0,  u0, v0);
+              uvs.push(u0, v0,  u1, v0,  u1, v1,  u0, v1);
               colors.push(
                 ao3 * topLight, ao3 * topLight, ao3 * topLight,
                 ao2 * topLight, ao2 * topLight, ao2 * topLight,
@@ -196,7 +196,7 @@ export class Chunk {
 
           // 2. BOTTOM FACE (-Y)
           const nBottom = sampleVoxel(x, y - 1, z);
-          const drawBottom = isWater ? (nBottom !== BlockType.WATER && nBottom !== BlockType.AIR) : (!isSolid(nBottom) || BLOCK_DEFS[nBottom]?.transparent);
+          const drawBottom = isWater ? (nBottom !== BlockType.WATER) : (!isSolid(nBottom) || BLOCK_DEFS[nBottom]?.transparent);
           if (drawBottom && y > 0) {
             const tileIdx = getFaceTextureIndex(block, 'bottom');
             const [u0, v0, u1, v1] = atlas.getUVs(tileIdx);
@@ -216,16 +216,17 @@ export class Chunk {
               x, y, z
             );
             targetNorm.push(0, -1, 0,  0, -1, 0,  0, -1, 0,  0, -1, 0);
-            targetUv.push(u0, v1,  u1, v1,  u1, v0,  u0, v0);
+            targetUv.push(u0, v0,  u1, v0,  u1, v1,  u0, v1);
             targetCol.push(
               botLight, botLight, botLight,
               botLight, botLight, botLight,
               botLight, botLight, botLight,
               botLight, botLight, botLight
             );
+            // Counter-clockwise winding when viewed from below so -Y normal is not culled
             targetInd.push(
-              curVert, curVert + 1, curVert + 2,
-              curVert, curVert + 2, curVert + 3
+              curVert, curVert + 2, curVert + 1,
+              curVert, curVert + 3, curVert + 2
             );
 
             if (isWater) waterVertCount += 4;

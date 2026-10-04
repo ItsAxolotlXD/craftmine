@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { BlockType, BLOCK_DEFS, getBlockTextureUrl } from '../game/blocks';
+import { getBlockSprite } from '../game/textureAtlas';
 import { X, Search } from 'lucide-react';
 
 interface InventoryModalProps {
@@ -76,7 +77,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
               >
                 {/* Block Texture Preview */}
                 <img
-                  src={getBlockTextureUrl(block.id)}
+                  src={getBlockTextureUrl(block.id) || getBlockSprite(block.id)}
                   alt={block.name}
                   className="w-8 h-8 object-contain [image-rendering:pixelated] drop-shadow-xs"
                 />

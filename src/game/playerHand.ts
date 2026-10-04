@@ -59,17 +59,9 @@ export class PlayerHand {
     this.blockMesh.position.set(-0.06, -0.28, -0.12);
     this.armGroup.add(this.blockMesh);
 
-    // 4. Flint and Steel tool model (metallic curved plate + flint striker)
-    const toolGeo = new THREE.BoxGeometry(0.04, 0.22, 0.16);
-    const toolMat = new THREE.MeshLambertMaterial({
-      color: 0x9e9e9e,
-      depthTest: false,
-    });
-    this.toolMesh = new THREE.Mesh(toolGeo, toolMat);
-    this.toolMesh.renderOrder = 1000;
-    this.toolMesh.position.set(-0.06, -0.28, -0.12);
-    this.toolMesh.visible = false;
-    this.armGroup.add(this.toolMesh);
+    // 4. Tool Group for handheld tools
+    this.toolMesh = new THREE.Mesh(new THREE.BufferGeometry()); // dummy for backwards compat
+    this.createToolModels();
 
     // Prominent resting position in lower-right viewport
     this.armGroup.position.set(0.32, -0.26, -0.48);
@@ -77,6 +69,95 @@ export class PlayerHand {
 
     this.group.add(this.armGroup);
     this.camera.add(this.group);
+  }
+
+  private toolModels = new Map<BlockType, THREE.Group>();
+
+  private createToolModels() {
+    const handleMat = new THREE.MeshLambertMaterial({ color: 0x78350f, depthTest: false });
+    const diaMat = new THREE.MeshLambertMaterial({ color: 0x38bdf8, depthTest: false });
+    const steelMat = new THREE.MeshLambertMaterial({ color: 0xcbd5e1, depthTest: false });
+
+    // 1. Sword
+    const swordGroup = new THREE.Group();
+    swordGroup.renderOrder = 1000;
+    // Handle
+    const swordHandle = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.14, 0.04), handleMat);
+    swordHandle.position.set(0, -0.25, 0);
+    swordGroup.add(swordHandle);
+    // Guard
+    const swordGuard = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.03, 0.06), diaMat);
+    swordGuard.position.set(0, -0.17, 0);
+    swordGroup.add(swordGuard);
+    // Blade
+    const swordBlade = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.38, 0.02), diaMat);
+    swordBlade.position.set(0, 0.03, 0);
+    swordGroup.add(swordBlade);
+    swordGroup.visible = false;
+    this.armGroup.add(swordGroup);
+    this.toolModels.set(BlockType.SWORD, swordGroup);
+
+    // 2. Pickaxe
+    const pickGroup = new THREE.Group();
+    pickGroup.renderOrder = 1000;
+    const pickHandle = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.38, 0.04), handleMat);
+    pickHandle.position.set(0, -0.14, 0);
+    pickGroup.add(pickHandle);
+    const pickHead = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.06, 0.05), diaMat);
+    pickHead.position.set(0, 0.06, 0);
+    pickGroup.add(pickHead);
+    pickGroup.visible = false;
+    this.armGroup.add(pickGroup);
+    this.toolModels.set(BlockType.PICKAXE, pickGroup);
+
+    // 3. Shovel
+    const shovelGroup = new THREE.Group();
+    shovelGroup.renderOrder = 1000;
+    const shovelHandle = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.36, 0.04), handleMat);
+    shovelHandle.position.set(0, -0.14, 0);
+    shovelGroup.add(shovelHandle);
+    const shovelHead = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.03), diaMat);
+    shovelHead.position.set(0, 0.07, 0);
+    shovelGroup.add(shovelHead);
+    shovelGroup.visible = false;
+    this.armGroup.add(shovelGroup);
+    this.toolModels.set(BlockType.SHOVEL, shovelGroup);
+
+    // 4. Axe
+    const axeGroup = new THREE.Group();
+    axeGroup.renderOrder = 1000;
+    const axeHandle = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.38, 0.04), handleMat);
+    axeHandle.position.set(0, -0.14, 0);
+    axeGroup.add(axeHandle);
+    const axeHead = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, 0.05), diaMat);
+    axeHead.position.set(0.06, 0.05, 0);
+    axeGroup.add(axeHead);
+    axeGroup.visible = false;
+    this.armGroup.add(axeGroup);
+    this.toolModels.set(BlockType.AXE, axeGroup);
+
+    // 5. Hoe
+    const hoeGroup = new THREE.Group();
+    hoeGroup.renderOrder = 1000;
+    const hoeHandle = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.38, 0.04), handleMat);
+    hoeHandle.position.set(0, -0.14, 0);
+    hoeGroup.add(hoeHandle);
+    const hoeHead = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.05, 0.05), diaMat);
+    hoeHead.position.set(0.05, 0.06, 0);
+    hoeGroup.add(hoeHead);
+    hoeGroup.visible = false;
+    this.armGroup.add(hoeGroup);
+    this.toolModels.set(BlockType.HOE, hoeGroup);
+
+    // 6. Flint and Steel
+    const fnsGroup = new THREE.Group();
+    fnsGroup.renderOrder = 1000;
+    const fnsMesh = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.22, 0.16), steelMat);
+    fnsMesh.position.set(-0.06, -0.28, -0.12);
+    fnsGroup.add(fnsMesh);
+    fnsGroup.visible = false;
+    this.armGroup.add(fnsGroup);
+    this.toolModels.set(BlockType.FLINT_AND_STEEL, fnsGroup);
   }
 
   // Trigger punch swing when clicking
@@ -87,12 +168,17 @@ export class PlayerHand {
 
   // Update held block / item model
   public updateHeldBlock(type: BlockType) {
-    if (type === BlockType.FLINT_AND_STEEL) {
+    // Hide all tools first
+    for (const model of this.toolModels.values()) {
+      model.visible = false;
+    }
+
+    const toolModel = this.toolModels.get(type);
+    if (toolModel) {
       this.blockMesh.visible = false;
-      this.toolMesh.visible = true;
+      toolModel.visible = true;
     } else {
       this.blockMesh.visible = true;
-      this.toolMesh.visible = false;
       const def = BLOCK_DEFS[type];
       if (def && this.blockMesh.material instanceof THREE.MeshLambertMaterial) {
         this.blockMesh.material.color.set(def.colorHex || '#ffffff');

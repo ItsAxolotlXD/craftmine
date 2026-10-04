@@ -82,8 +82,12 @@ export class GameEngine {
   private frameCount: number = 0;
   private lastFpsTime: number = performance.now();
   private isRunning: boolean = false;
+  public isPaused: boolean = false;
   private animFrameId: number | null = null;
   private lastTime: number = performance.now();
+
+  // Dimension & Portal state
+  private portalTimer: number = 0;
 
   // Callbacks for UI updates
   public onFpsUpdate?: (fps: number) => void;
@@ -213,12 +217,27 @@ export class GameEngine {
     }
   }
 
+  public pause() {
+    this.isPaused = true;
+  }
+
+  public resume() {
+    this.isPaused = false;
+    this.lastTime = performance.now();
+  }
+
   private loop = () => {
     if (!this.isRunning) return;
     this.animFrameId = requestAnimationFrame(this.loop);
 
+    // If game is paused in Main Menu, do not advance physics or world time!
+    if (this.isPaused) {
+      this.renderer.render(this.scene, this.camera);
+      return;
+    }
+
     const now = performance.now();
-    const dt = (now - this.lastTime) / 1000;
+    const dt = Math.min((now - this.lastTime) / 1000, 0.1);
     this.lastTime = now;
 
     // Update FPS
@@ -231,7 +250,7 @@ export class GameEngine {
     }
 
     // 1. Day/Night progression
-    if (this.settings.daySpeed > 0) {
+    if (this.settings.daySpeed > 0 && this.world.dimension === 'overworld') {
       this.timeOfDay = (this.timeOfDay + dt * this.daySpeed * 0.05 * this.settings.daySpeed) % 1.0;
     }
     this.updateAtmosphere();
@@ -240,6 +259,23 @@ export class GameEngine {
     this.player.update(dt, this.input, this.world);
     if (this.onUnderwaterChange) {
       this.onUnderwaterChange(this.player.isUnderwater);
+    }
+
+    // Check Nether Portal immersion
+    const blockUnderPlayer = this.world.getBlockAt(
+      Math.floor(this.player.position.x),
+      Math.floor(this.player.position.y + 0.6),
+      Math.floor(this.player.position.z)
+    );
+    if (blockUnderPlayer === BlockType.NETHER_PORTAL) {
+      this.portalTimer += dt;
+      if (this.portalTimer > 1.2) {
+        this.portalTimer = -2.5; // Cooldown to avoid bouncing
+        this.toggleDimension();
+      }
+    } else {
+      if (this.portalTimer > 0) this.portalTimer = 0;
+      else if (this.portalTimer < 0) this.portalTimer += dt;
     }
 
     // 3. Voxel Raycasting from Camera (longer reach in creative mode)
@@ -280,6 +316,27 @@ export class GameEngine {
 
   // Atmospheric lighting, sun/moon orbit, and dynamic sky colors
   private updateAtmosphere() {
+    if (this.world.dimension === 'nether') {
+      // Nether: deep crimson atmosphere, thick hellish fog
+      const netherSky = new THREE.Color(0x280608);
+      this.scene.background = netherSky;
+      if (this.scene.fog instanceof THREE.FogExp2) {
+        this.scene.fog.color = netherSky;
+        this.scene.fog.density = 0.038;
+      }
+      this.ambientLight.intensity = 0.75;
+      this.ambientLight.color.setHex(0xaa3333);
+      this.sunLight.intensity = 0.3;
+      this.sunMesh.visible = false;
+      this.moonMesh.visible = false;
+      (this.starsMesh.material as THREE.PointsMaterial).opacity = 0;
+      return;
+    }
+
+    this.sunMesh.visible = true;
+    this.moonMesh.visible = true;
+    this.ambientLight.color.setHex(0xffffff);
+
     const angle = this.timeOfDay * Math.PI * 2;
     const sunDistance = 250;
 
@@ -349,6 +406,22 @@ export class GameEngine {
     }
   }
 
+  // Toggle dimension between Overworld and Nether
+  public toggleDimension() {
+    if (this.world.dimension === 'overworld') {
+      this.world.switchDimension('nether');
+      this.player.position.set(8.5, 33.5, 8.5);
+      this.particles.spawnExplosion(8.5, 33.5, 8.5);
+      this.world.update(this.player.position, 100);
+    } else {
+      this.world.switchDimension('overworld');
+      const spawn = this.world.getSpawnPosition();
+      this.player.position.copy(spawn);
+      this.particles.spawnExplosion(spawn.x, spawn.y, spawn.z);
+      this.world.update(this.player.position, 100);
+    }
+  }
+
   // Break targeted block
   public breakTargetedBlock() {
     this.hand.triggerSwing();
@@ -378,13 +451,36 @@ export class GameEngine {
     if (!this.currentHit.hit) return;
     const { placePos, blockPos, block } = this.currentHit;
 
-    // Flint and Steel ignites TNT or strikes spark!
+    // 1. Flint and Steel ignites TNT or builds/ignites Nether Portal!
     if (blockType === BlockType.FLINT_AND_STEEL) {
       if (block === BlockType.TNT) {
         this.tnt.igniteTNT(blockPos.x, blockPos.y, blockPos.z);
       } else {
-        soundEngine.playFlintAndSteel();
+        const portalIgnited = this.world.ignitePortal(placePos.x, placePos.y, placePos.z) ||
+                              this.world.ignitePortal(blockPos.x, blockPos.y, blockPos.z);
+        if (portalIgnited) {
+          soundEngine.playBlockPlace('glass');
+          this.particles.spawnExplosion(placePos.x, placePos.y, placePos.z);
+        } else {
+          soundEngine.playFlintAndSteel();
+        }
       }
+      return;
+    }
+
+    // 2. Hoe tilling grass/dirt into Farmland
+    if (blockType === BlockType.HOE) {
+      if (block === BlockType.GRASS || block === BlockType.DIRT || block === BlockType.FALL_GRASS) {
+        this.world.setBlockAt(blockPos.x, blockPos.y, blockPos.z, BlockType.FARMLAND);
+        this.particles.spawnBlockBreak(blockPos.x, blockPos.y, blockPos.z, BlockType.DIRT);
+        soundEngine.playBlockPlace('grass');
+        return;
+      }
+    }
+
+    // 3. Sword swing sound
+    if (blockType === BlockType.SWORD) {
+      soundEngine.playBlockBreak();
       return;
     }
 
@@ -419,6 +515,20 @@ export class GameEngine {
     soundEngine.playBlockPlace(def ? def.soundType : 'stone');
 
     this.world.setBlockAt(placePos.x, placePos.y, placePos.z, blockType);
+  }
+
+  // Place structure at player position
+  public placeStructure(structureType: string): boolean {
+    const px = Math.floor(this.player.position.x);
+    const py = Math.floor(this.player.position.y);
+    const pz = Math.floor(this.player.position.z);
+    this.world.placeStructure(structureType, px, py, pz);
+    return true;
+  }
+
+  // Locate nearest biome
+  public locateBiome(biomeName: string): { x: number; z: number; dist: number } | null {
+    return this.world.generator.locateBiome(biomeName, this.player.position.x, this.player.position.z);
   }
 
   // Apply settings

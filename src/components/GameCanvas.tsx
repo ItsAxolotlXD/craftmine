@@ -9,15 +9,15 @@ import { MainMenu } from './MainMenu';
 import { ChatOverlay, ChatMessage } from './ChatOverlay';
 
 const DEFAULT_HOTBAR: BlockType[] = [
-  BlockType.GRASS,
-  BlockType.DIRT,
-  BlockType.COBBLESTONE,
-  BlockType.WOOD_PLANK,
-  BlockType.OAK_LOG,
-  BlockType.TORCH,
-  BlockType.TNT,
+  BlockType.SWORD,
+  BlockType.PICKAXE,
+  BlockType.OBSIDIAN,
   BlockType.FLINT_AND_STEEL,
-  BlockType.GLASS,
+  BlockType.GRASS,
+  BlockType.WOOD_PLANK,
+  BlockType.TORCH,
+  BlockType.HOE,
+  BlockType.TNT,
 ];
 
 export const GameCanvas: React.FC = () => {
@@ -26,6 +26,7 @@ export const GameCanvas: React.FC = () => {
 
   // Main Menu State
   const [isMainMenuOpen, setIsMainMenuOpen] = useState(true);
+  const [hasWorldStarted, setHasWorldStarted] = useState(false);
 
   // Chat & Commands State
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -47,6 +48,19 @@ export const GameCanvas: React.FC = () => {
   const [isFlying, setIsFlying] = useState(true);
   const [playerPos, setPlayerPos] = useState({ x: 0, y: 0, z: 0 });
   const [currentSeed, setCurrentSeed] = useState(4289);
+
+  // Synchronous refs to avoid stale closures during event callbacks
+  const isInventoryOpenRef = useRef(isInventoryOpen);
+  const isSettingsOpenRef = useRef(isSettingsOpen);
+  const isChatOpenRef = useRef(isChatOpen);
+  const isMainMenuOpenRef = useRef(isMainMenuOpen);
+  const hasWorldStartedRef = useRef(hasWorldStarted);
+
+  useEffect(() => { isInventoryOpenRef.current = isInventoryOpen; }, [isInventoryOpen]);
+  useEffect(() => { isSettingsOpenRef.current = isSettingsOpen; }, [isSettingsOpen]);
+  useEffect(() => { isChatOpenRef.current = isChatOpen; }, [isChatOpen]);
+  useEffect(() => { isMainMenuOpenRef.current = isMainMenuOpen; }, [isMainMenuOpen]);
+  useEffect(() => { hasWorldStartedRef.current = hasWorldStarted; }, [hasWorldStarted]);
 
   // Settings State - Default Creative Mode with Flight Enabled
   const [settings, setSettings] = useState<GameSettings>({
@@ -80,6 +94,9 @@ export const GameCanvas: React.FC = () => {
     engineRef.current = engine;
 
     engine.start();
+    if (isMainMenuOpen) {
+      engine.pause();
+    }
 
     // Periodic state sync for HUD
     const syncInterval = window.setInterval(() => {
@@ -96,6 +113,17 @@ export const GameCanvas: React.FC = () => {
     };
   }, [currentSeed]);
 
+  // Synchronize pause state with Main Menu: when in main menu, the world stops!
+  useEffect(() => {
+    if (engineRef.current) {
+      if (isMainMenuOpen) {
+        engineRef.current.pause();
+      } else {
+        engineRef.current.resume();
+      }
+    }
+  }, [isMainMenuOpen]);
+
   // Pointer Lock handling
   const handleLockPointer = useCallback(() => {
     if (!containerRef.current || isInventoryOpen || isSettingsOpen || isMainMenuOpen) return;
@@ -109,6 +137,18 @@ export const GameCanvas: React.FC = () => {
     const handlePointerLockChange = () => {
       const locked = document.pointerLockElement !== null;
       setIsLocked(locked);
+
+      // If pointer lock was lost while playing and not opening a submodal (inventory, settings, chat):
+      // Directly send player back to Main Menu screen!
+      if (
+        !locked &&
+        hasWorldStartedRef.current &&
+        !isInventoryOpenRef.current &&
+        !isSettingsOpenRef.current &&
+        !isChatOpenRef.current
+      ) {
+        setIsMainMenuOpen(true);
+      }
     };
 
     document.addEventListener('pointerlockchange', handlePointerLockChange);
@@ -153,14 +193,16 @@ export const GameCanvas: React.FC = () => {
           setIsSettingsOpen(false);
           return;
         }
-        // Toggle main menu on ESC if no other modal is open
-        if (!isMainMenuOpen) {
-          if (document.pointerLockElement) {
-            document.exitPointerLock();
-          }
-          setIsMainMenuOpen(true);
+        if (isChatOpen) {
+          setIsChatOpen(false);
           return;
         }
+        // User hit ESC: exit pointer lock and immediately go back directly to main menu screen
+        if (document.pointerLockElement) {
+          document.exitPointerLock();
+        }
+        setIsMainMenuOpen(true);
+        return;
       }
 
       if (e.code === 'F3') {
@@ -386,8 +428,54 @@ export const GameCanvas: React.FC = () => {
       } else {
         addChatMessage('Usage: /tp <mountain/ocean/caves/river/spawn> or /tp <x> <y> <z>', '#ff5555');
       }
+    } else if (command === '/placestructure') {
+      const structureName = args[0]?.toLowerCase() || 'village';
+      if (['village', 'temple', 'desert_temple', 'dungeon', 'mineshaft'].some(s => structureName.includes(s))) {
+        if (engineRef.current) {
+          const success = engineRef.current.placeStructure(structureName);
+          if (success) {
+            addChatMessage(`[Structure] Placed structure "${structureName}" at your coordinates!`, '#55ff55');
+          }
+        }
+      } else {
+        addChatMessage('Usage: /placestructure <village | desert_temple | dungeon | mineshaft>', '#ffaa00');
+      }
+    } else if (command === '/locatebiome') {
+      const biomeName = args.join(' ').toLowerCase() || args[0]?.toLowerCase();
+      if (!biomeName) {
+        addChatMessage('Usage: /locatebiome <desert | fall_forest | mangrove_forest | mountains | ocean | taiga | plains>', '#ffaa00');
+      } else if (engineRef.current) {
+        const result = engineRef.current.locateBiome(biomeName);
+        if (result) {
+          addChatMessage(`[Biome] Nearest ${biomeName} is at [X: ${result.x}, Z: ${result.z}] (~${result.dist} blocks away). Type /tp ${result.x} 65 ${result.z} to visit!`, '#55ff55');
+        } else {
+          addChatMessage(`[Biome] Could not find biome "${biomeName}" within search radius.`, '#ff5555');
+        }
+      }
+    } else if (command === '/dimension') {
+      const dim = args[0]?.toLowerCase();
+      if (dim === 'nether' || dim === 'overworld') {
+        if (engineRef.current) {
+          engineRef.current.world.switchDimension(dim as any);
+          if (dim === 'nether') {
+            engineRef.current.player.position.set(8.5, 33.5, 8.5);
+          } else {
+            const spawn = engineRef.current.world.getSpawnPosition();
+            engineRef.current.player.position.copy(spawn);
+          }
+          engineRef.current.particles.spawnExplosion(
+            engineRef.current.player.position.x,
+            engineRef.current.player.position.y,
+            engineRef.current.player.position.z
+          );
+          engineRef.current.world.update(engineRef.current.player.position, 60);
+          addChatMessage(`[Dimension] Warped to ${dim.toUpperCase()}!`, '#ff55ff');
+        }
+      } else {
+        addChatMessage('Usage: /dimension <nether | overworld>', '#ffaa00');
+      }
     } else if (command === '/help') {
-      addChatMessage('Commands: /gamemode <survival/creative>, /time set <day/night>, /tp <mountain/ocean/caves/river/spawn>', '#ffff55');
+      addChatMessage('Commands: /placestructure <village/temple/dungeon/mineshaft>, /locatebiome <biome>, /gamemode <survival/creative>, /time set <day/night>, /tp <coords>', '#ffff55');
     } else {
       addChatMessage(`Unknown command: ${command}. Type /help for help.`, '#ff5555');
     }
@@ -426,6 +514,7 @@ export const GameCanvas: React.FC = () => {
   // Start game from Main Menu
   const handleStartGame = () => {
     setIsMainMenuOpen(false);
+    setHasWorldStarted(true);
     setTimeout(() => {
       handleLockPointer();
     }, 100);
@@ -482,6 +571,8 @@ export const GameCanvas: React.FC = () => {
         <MainMenu
           onStartGame={handleStartGame}
           onOpenSettings={() => setIsSettingsOpen(true)}
+          hasWorldStarted={hasWorldStarted}
+          onNewWorld={() => handleRegenerateWorld(Math.floor(Math.random() * 100000))}
         />
       )}
 

@@ -96,7 +96,7 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
           onChange={(e) => setInputVal(e.target.value)}
           onKeyDown={handleKeyDown}
           onKeyUp={(e) => e.stopPropagation()}
-          placeholder="Type /gamemode <survival/creative> or /help..."
+          placeholder="Type /placestructure, /locatebiome, /gamemode, or /help..."
           className="w-full bg-transparent text-white font-minecraft text-sm focus:outline-hidden placeholder-gray-400 mc-shadow"
         />
       </div>

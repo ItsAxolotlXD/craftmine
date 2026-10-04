@@ -1,5 +1,6 @@
 import React from 'react';
 import { BlockType, BLOCK_DEFS, getBlockTextureUrl } from '../game/blocks';
+import { getBlockSprite } from '../game/textureAtlas';
 
 interface HUDProps {
   hotbarBlocks: BlockType[];
@@ -15,8 +16,6 @@ export const HUD: React.FC<HUDProps> = ({
   selectedSlot,
   onSelectSlot,
   playerPos,
-  isLocked,
-  onLockPointer,
 }) => {
   const currentBlock = BLOCK_DEFS[hotbarBlocks[selectedSlot]];
 
@@ -29,21 +28,12 @@ export const HUD: React.FC<HUDProps> = ({
         </div>
       </div>
 
-      {/* 2. Center: Classic Crosshair or Click to Play prompt */}
+      {/* 2. Center: Classic Crosshair (Click to play button removed) */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        {isLocked ? (
-          <div className="relative w-4 h-4 flex items-center justify-center opacity-85">
-            <div className="absolute w-4 h-[2px] bg-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]" />
-            <div className="absolute h-4 w-[2px] bg-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]" />
-          </div>
-        ) : (
-          <button
-            onClick={onLockPointer}
-            className="pointer-events-auto px-6 py-3 bg-[#444444]/90 hover:bg-[#555555] text-white border-2 border-t-[#aaaaaa] border-l-[#aaaaaa] border-r-[#222222] border-b-[#222222] rounded-xs shadow-2xl mc-shadow tracking-wider text-sm transition-transform active:scale-95 cursor-pointer"
-          >
-            CLICK TO PLAY
-          </button>
-        )}
+        <div className="relative w-4 h-4 flex items-center justify-center opacity-85">
+          <div className="absolute w-4 h-[2px] bg-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]" />
+          <div className="absolute h-4 w-[2px] bg-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]" />
+        </div>
       </div>
 
       {/* 3. Bottom: Item Name Tooltip & 9-Slot Texture Hotbar */}
@@ -59,7 +49,8 @@ export const HUD: React.FC<HUDProps> = ({
         <div className="flex items-center gap-1 p-1 bg-[#8f8f8f]/85 border-2 border-t-[#ffffff] border-l-[#ffffff] border-r-[#373737] border-b-[#373737] shadow-2xl rounded-xs">
           {hotbarBlocks.map((blockId, index) => {
             const isSelected = index === selectedSlot;
-            const textureUrl = getBlockTextureUrl(blockId);
+            const officialUrl = getBlockTextureUrl(blockId);
+            const spriteUrl = officialUrl || getBlockSprite(blockId);
 
             return (
               <button
@@ -77,11 +68,18 @@ export const HUD: React.FC<HUDProps> = ({
                 </span>
 
                 {/* Block Texture Image */}
-                <img
-                  src={textureUrl}
-                  alt={`Slot ${index + 1}`}
-                  className="w-7 h-7 sm:w-8 sm:h-8 object-contain [image-rendering:pixelated] drop-shadow-xs pointer-events-none"
-                />
+                {spriteUrl ? (
+                  <img
+                    src={spriteUrl}
+                    alt={`Slot ${index + 1}`}
+                    className="w-7 h-7 sm:w-8 sm:h-8 object-contain [image-rendering:pixelated] drop-shadow-xs pointer-events-none"
+                  />
+                ) : (
+                  <div
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-xs border border-black/30"
+                    style={{ backgroundColor: currentBlock?.colorHex || '#888888' }}
+                  />
+                )}
               </button>
             );
           })}

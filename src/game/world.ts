@@ -23,6 +23,7 @@ export class WorldManager implements ChunkNeighborAccessor {
   public waterMaterial: THREE.MeshStandardMaterial;
 
   public renderDistance: number = 3; // Fast, smooth default radius (7x7 chunks)
+  public dimension: 'overworld' | 'nether' | 'sift' = 'overworld';
 
   // Dynamic Torch PointLights (emit light around 20 blocks)
   public torchLights: Map<string, THREE.PointLight> = new Map();
@@ -39,13 +40,13 @@ export class WorldManager implements ChunkNeighborAccessor {
     this.atlas = atlas;
     this.generator = new WorldGenerator(seed);
 
-    // High performance opaque material with FrontSide culling
+    // High performance opaque material with double side rendering
     this.opaqueMaterial = new THREE.MeshLambertMaterial({
       map: this.atlas.texture,
       vertexColors: true,
       transparent: true,
       alphaTest: 0.1, // Clean leaf punch-through without sorting issues
-      side: THREE.FrontSide, // FrontSide eliminates 50% GPU fillrate load!
+      side: THREE.DoubleSide,
     });
 
     // Realistic water material
@@ -234,8 +235,15 @@ export class WorldManager implements ChunkNeighborAccessor {
       const key = this.getChunkKey(item.cx, item.cz);
       if (this.chunks.has(key)) continue;
 
-      // Generate voxel data
-      const voxels = this.generator.generateChunkData(item.cx, item.cz);
+      // Generate voxel data based on current dimension
+      let voxels: Uint8Array;
+      if (this.dimension === 'nether') {
+        voxels = this.generator.generateNetherChunk(item.cx, item.cz);
+      } else if (this.dimension === 'sift') {
+        voxels = this.generator.generateSiftChunk(item.cx, item.cz);
+      } else {
+        voxels = this.generator.generateChunkData(item.cx, item.cz);
+      }
       const chunk = new Chunk(item.cx, item.cz, voxels);
       this.chunks.set(key, chunk);
 
@@ -404,7 +412,7 @@ export class WorldManager implements ChunkNeighborAccessor {
     return new THREE.Vector3(bestX + 0.5, bestH + 2.5, bestZ + 0.5);
   }
 
-  // Clear all chunks (e.g. on new seed)
+  // Clear all chunks (e.g. on new seed or dimension change)
   public clearAll() {
     for (const light of this.torchLights.values()) {
       this.scene.remove(light);
@@ -419,5 +427,119 @@ export class WorldManager implements ChunkNeighborAccessor {
     }
     this.chunks.clear();
     this.loadQueue = [];
+  }
+
+  // Switch between Overworld, Nether, and Sift dimensions
+  public switchDimension(target: 'overworld' | 'nether' | 'sift') {
+    this.clearAll();
+    this.dimension = target;
+  }
+
+  // Place a full structure at target coordinates
+  public placeStructure(type: string, ox: number, oy: number, oz: number) {
+    const norm = type.toLowerCase().trim();
+    const set = (x: number, y: number, z: number, b: BlockType) => this.setBlockAt(x, y, z, b);
+
+    if (norm.includes('village')) {
+      this.generator.buildVillage(set, ox, oy, oz);
+    } else if (norm.includes('temple') || norm.includes('desert')) {
+      this.generator.buildDesertTemple(set, ox, oy, oz);
+    } else if (norm.includes('dungeon')) {
+      this.generator.buildDungeon(set, ox, oy, oz);
+    } else if (norm.includes('mineshaft')) {
+      this.generator.buildMineshaft(set, ox, oy, oz);
+    }
+  }
+
+  // Ignite nether portal inside obsidian frame
+  public ignitePortal(centerX: number, centerY: number, centerZ: number): boolean {
+    // Check for surrounding obsidian frame (either X-aligned or Z-aligned)
+    // Try Z-aligned frame first:
+    const checkFrameZ = () => {
+      // Find air space bounds
+      let yBottom = centerY;
+      while (yBottom > 0 && this.getBlockAt(centerX, yBottom - 1, centerZ) === BlockType.AIR) {
+        yBottom--;
+      }
+      // Check if floor below is obsidian
+      if (this.getBlockAt(centerX, yBottom - 1, centerZ) !== BlockType.OBSIDIAN) return false;
+
+      // Find z bounds
+      let zMin = centerZ;
+      while (this.getBlockAt(centerX, yBottom, zMin - 1) === BlockType.AIR) zMin--;
+      let zMax = centerZ;
+      while (this.getBlockAt(centerX, yBottom, zMax + 1) === BlockType.AIR) zMax++;
+
+      const width = zMax - zMin + 1;
+      if (width < 1 || width > 6) return false;
+
+      // Check height
+      let height = 0;
+      while (height < 6 && this.getBlockAt(centerX, yBottom + height, zMin) === BlockType.AIR) {
+        height++;
+      }
+      if (height < 2 || height > 6) return false;
+
+      // Fill inner air with nether portal blocks
+      for (let z = zMin; z <= zMax; z++) {
+        for (let y = yBottom; y < yBottom + height; y++) {
+          this.setBlockAt(centerX, y, z, BlockType.NETHER_PORTAL);
+        }
+      }
+      return true;
+    };
+
+    // Try X-aligned frame:
+    const checkFrameX = () => {
+      let yBottom = centerY;
+      while (yBottom > 0 && this.getBlockAt(centerX, yBottom - 1, centerZ) === BlockType.AIR) {
+        yBottom--;
+      }
+      if (this.getBlockAt(centerX, yBottom - 1, centerZ) !== BlockType.OBSIDIAN) return false;
+
+      let xMin = centerX;
+      while (this.getBlockAt(xMin - 1, yBottom, centerZ) === BlockType.AIR) xMin--;
+      let xMax = centerX;
+      while (this.getBlockAt(xMax + 1, yBottom, centerZ) === BlockType.AIR) xMax++;
+
+      const width = xMax - xMin + 1;
+      if (width < 1 || width > 6) return false;
+
+      let height = 0;
+      while (height < 6 && this.getBlockAt(xMin, yBottom + height, centerZ) === BlockType.AIR) {
+        height++;
+      }
+      if (height < 2 || height > 6) return false;
+
+      for (let x = xMin; x <= xMax; x++) {
+        for (let y = yBottom; y < yBottom + height; y++) {
+          this.setBlockAt(x, y, centerZ, BlockType.NETHER_PORTAL);
+        }
+      }
+      return true;
+    };
+
+    if (checkFrameZ()) return true;
+    if (checkFrameX()) return true;
+
+    // Fallback: if clicking obsidian or air right next to obsidian, place portal blocks
+    const neighbors = [
+      [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]
+    ];
+    let obsidianNeighborCount = 0;
+    for (const [dx, dy, dz] of neighbors) {
+      if (this.getBlockAt(centerX + dx, centerY + dy, centerZ + dz) === BlockType.OBSIDIAN) {
+        obsidianNeighborCount++;
+      }
+    }
+    if (obsidianNeighborCount >= 2) {
+      this.setBlockAt(centerX, centerY, centerZ, BlockType.NETHER_PORTAL);
+      if (this.getBlockAt(centerX, centerY + 1, centerZ) === BlockType.AIR) {
+        this.setBlockAt(centerX, centerY + 1, centerZ, BlockType.NETHER_PORTAL);
+      }
+      return true;
+    }
+
+    return false;
   }
 }

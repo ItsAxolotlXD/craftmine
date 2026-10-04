@@ -305,7 +305,7 @@ class SoundEngine {
   }
 
   // Animal ambient sounds
-  public playAnimalSound(type: 'pig' | 'cow' | 'sheep' | 'chicken') {
+  public playAnimalSound(type: 'pig' | 'cow' | 'sheep' | 'chicken' | 'frog' | 'sift_bunny') {
     if (!this.enabled || this.volume <= 0) return;
     this.initCtx();
     if (!this.ctx || !this.masterGain) return;
@@ -313,6 +313,47 @@ class SoundEngine {
     const t = this.ctx.currentTime;
 
     switch (type) {
+      case 'sift_bunny': {
+        // High-pitched cute chirp
+        const osc = this.ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, t);
+        osc.frequency.exponentialRampToValueAtTime(1320, t + 0.06);
+        osc.frequency.exponentialRampToValueAtTime(660, t + 0.12);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.14, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(t);
+        osc.stop(t + 0.14);
+        break;
+      }
+      case 'frog': {
+        // Frog ribbit / croak: two quick throaty bass bursts
+        const osc = this.ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(140, t);
+        osc.frequency.exponentialRampToValueAtTime(75, t + 0.12);
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(320, t);
+        filter.Q.setValueAtTime(4.0, t);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.25, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(t);
+        osc.stop(t + 0.15);
+        break;
+      }
       case 'pig': {
         // Pig oink: modulated nasal sawtooth
         const osc = this.ctx.createOscillator();

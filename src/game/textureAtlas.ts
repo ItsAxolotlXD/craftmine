@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ATLAS_COLS, ATLAS_ROWS, ATLAS_INDEX } from './blocks';
+import { ATLAS_COLS, ATLAS_ROWS, ATLAS_INDEX, BlockType, BLOCK_DEFS, getFaceTextureIndex } from './blocks';
 
 /**
  * Procedural 16x16 Pixel Texture Atlas Generator.
@@ -91,6 +91,45 @@ export class TextureAtlas {
     this.renderLeaves(ATLAS_INDEX.LEAVES_RED, '#b22222', '#7f1d1d', '#dc2626');
     this.renderLeaves(ATLAS_INDEX.LEAVES_ORANGE, '#d97706', '#b45309', '#f59e0b');
     this.renderLeaves(ATLAS_INDEX.LEAVES_CHERRY, '#f472b6', '#db2777', '#fbcfe8');
+
+    // New Biome Blocks & Tools
+    this.renderCactus(ATLAS_INDEX.CACTUS_SIDE, ATLAS_INDEX.CACTUS_TOP);
+    this.renderDeadBush(ATLAS_INDEX.DEAD_BUSH);
+    this.renderFallGrassTop(ATLAS_INDEX.FALL_GRASS_TOP);
+    this.renderFallGrassSide(ATLAS_INDEX.FALL_GRASS_SIDE);
+    this.renderMud(ATLAS_INDEX.MUD);
+    this.renderMangroveLogSide(ATLAS_INDEX.MANGROVE_LOG_SIDE);
+    this.renderMangroveLogTop(ATLAS_INDEX.MANGROVE_LOG_TOP);
+    this.renderLeaves(ATLAS_INDEX.MANGROVE_LEAVES, '#2b5e28', '#1c421a', '#3e7d3a');
+    this.renderMangroveRoots(ATLAS_INDEX.MANGROVE_ROOTS);
+    this.renderFarmlandTop(ATLAS_INDEX.FARMLAND_TOP);
+    this.renderFarmlandSide(ATLAS_INDEX.FARMLAND_SIDE);
+    this.renderNetherrack(ATLAS_INDEX.NETHERRACK);
+    this.renderSoulSand(ATLAS_INDEX.SOUL_SAND);
+    this.renderNetherPortal(ATLAS_INDEX.NETHER_PORTAL);
+    this.renderChest(ATLAS_INDEX.CHEST_SIDE, ATLAS_INDEX.CHEST_TOP, ATLAS_INDEX.CHEST_FRONT);
+    this.renderSpawner(ATLAS_INDEX.SPAWNER);
+
+    // Tools
+    this.renderTool(ATLAS_INDEX.TOOL_SWORD, 'sword');
+    this.renderTool(ATLAS_INDEX.TOOL_PICKAXE, 'pickaxe');
+    this.renderTool(ATLAS_INDEX.TOOL_SHOVEL, 'shovel');
+    this.renderTool(ATLAS_INDEX.TOOL_AXE, 'axe');
+    this.renderTool(ATLAS_INDEX.TOOL_HOE, 'hoe');
+    this.renderTool(ATLAS_INDEX.FLINT_AND_STEEL, 'flint_and_steel');
+
+    // Cave Veins & Frozen Ice Caves
+    this.renderGranite(ATLAS_INDEX.GRANITE);
+    this.renderAndesite(ATLAS_INDEX.ANDESITE);
+    this.renderDiorite(ATLAS_INDEX.DIORITE);
+    this.renderPackedIce(ATLAS_INDEX.PACKED_ICE);
+    this.renderBlueIcicle(ATLAS_INDEX.BLUE_ICICLE);
+
+    // The Sift Dimension
+    this.renderSiftstone(ATLAS_INDEX.SIFTSTONE_TOP, ATLAS_INDEX.SIFTSTONE_SIDE, ATLAS_INDEX.SIFTSTONE_BOTTOM);
+    this.renderWillowBush(ATLAS_INDEX.WILLOW_BUSH);
+    this.renderWillowLog(ATLAS_INDEX.WILLOW_LOG_SIDE, ATLAS_INDEX.WILLOW_LOG_TOP);
+    this.renderLeaves(ATLAS_INDEX.WILLOW_LEAVES, '#ffffff', '#e2e8f0', '#f8fafc');
 
     // Load authentic Minecraft textures from official source
     this.loadOfficialTextures();
@@ -682,6 +721,576 @@ export class TextureAtlas {
       }
     }
   }
+
+  private renderCactus(sideIdx: number, topIdx: number) {
+    const [sx, sy] = this.getTileCoord(sideIdx);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const isRidge = x % 4 === 0 || x % 4 === 3;
+        const isSpike = (x % 4 === 1 || x % 4 === 2) && (y % 4 === 1);
+        let c = isRidge ? '#1e5e22' : '#2e7d32';
+        if (isSpike) c = '#111111';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(sx + x, sy + y, 1, 1);
+      }
+    }
+
+    const [tx, ty] = this.getTileCoord(topIdx);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const dx = Math.abs(x - 7.5);
+        const dy = Math.abs(y - 7.5);
+        let c = (dx < 2 && dy < 2) ? '#184c1b' : '#2e7d32';
+        if (x === 0 || x === 15 || y === 0 || y === 15) c = '#1b521e';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderDeadBush(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    this.ctx.clearRect(tx, ty, 16, 16);
+    this.ctx.fillStyle = '#8d6e4f';
+    const branches = [
+      [7, 15], [7, 14], [8, 14], [7, 13], [6, 12], [8, 12],
+      [5, 11], [9, 11], [4, 10], [10, 10], [3, 9], [11, 9],
+      [5, 8], [9, 8], [6, 7], [8, 7], [7, 6], [7, 5],
+      [4, 6], [11, 7], [2, 8], [13, 8], [7, 4], [8, 4]
+    ];
+    for (const [bx, by] of branches) {
+      this.ctx.fillRect(tx + bx, ty + by, 1, 1);
+    }
+  }
+
+  private renderFallGrassTop(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const n = this.hash2(x, y, 31);
+        let c = '#c2410c'; // rich autumn rust-red/orange
+        if (n < 0.25) c = '#9a3412';
+        else if (n > 0.75) c = '#ea580c';
+        else if (n > 0.5) c = '#b45309';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderFallGrassSide(idx: number) {
+    this.renderDirt(idx);
+    const [tx, ty] = this.getTileCoord(idx);
+    for (let x = 0; x < 16; x++) {
+      const drop = Math.floor(this.hash2(x, 0, 32) * 3) + 2;
+      for (let y = 0; y <= drop; y++) {
+        const n = this.hash2(x, y, 33);
+        let c = '#c2410c';
+        if (y === drop) c = '#9a3412';
+        else if (n > 0.6) c = '#ea580c';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderMud(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const n = this.hash2(x, y, 34);
+        let c = '#3d3028';
+        if (n < 0.2) c = '#2b221c';
+        else if (n > 0.75) c = '#4d3d34';
+        else if (n > 0.5) c = '#362a23';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderMangroveLogSide(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const n = this.hash2(x, y, 35);
+        const stripe = (x % 3 === 0);
+        let c = stripe ? '#4d231e' : '#69322b';
+        if (n > 0.75) c = '#7d3d35';
+        else if (n < 0.2) c = '#3d1c18';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderMangroveLogTop(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const dx = x - 7.5;
+        const dy = y - 7.5;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        let c = '#8e483e';
+        if (dist > 6) c = '#4d231e';
+        else if (Math.abs(dist - 3.5) < 0.7) c = '#75372e';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderMangroveRoots(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    this.ctx.clearRect(tx, ty, 16, 16);
+    // Muddy tangled root mesh with transparent holes
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const n = this.hash2(x, y, 36);
+        const isRoot = ((x + y * 2) % 5 < 3) || (n > 0.45);
+        if (isRoot) {
+          let c = '#4d291e';
+          if (n < 0.3) c = '#361c14';
+          else if (n > 0.8) c = '#66392c';
+          this.ctx.fillStyle = c;
+          this.ctx.fillRect(tx + x, ty + y, 1, 1);
+        }
+      }
+    }
+  }
+
+  private renderFarmlandTop(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const isFurrow = (y % 4 === 0);
+        let c = isFurrow ? '#332115' : '#4a3321';
+        const n = this.hash2(x, y, 37);
+        if (n > 0.7) c = '#593d28';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderFarmlandSide(idx: number) {
+    this.renderDirt(idx);
+    const [tx, ty] = this.getTileCoord(idx);
+    // Top 2px dried tilled crest
+    this.ctx.fillStyle = '#4a3321';
+    this.ctx.fillRect(tx, ty, 16, 2);
+  }
+
+  private renderNetherrack(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const n = this.hash2(x, y, 38);
+        let c = '#681c1c';
+        if (n < 0.2) c = '#470f0f';
+        else if (n > 0.8) c = '#8a2b2b';
+        else if (n > 0.6) c = '#792424';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderSoulSand(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const n = this.hash2(x, y, 39);
+        let c = '#49372d';
+        if (n < 0.2) c = '#35271f';
+        else if (n > 0.75) c = '#5c4639';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+    // Subtle ghostly soul faces
+    this.ctx.fillStyle = '#261b15';
+    this.ctx.fillRect(tx + 4, ty + 4, 2, 2);
+    this.ctx.fillRect(tx + 8, ty + 4, 2, 2);
+    this.ctx.fillRect(tx + 5, ty + 8, 4, 2);
+  }
+
+  private renderNetherPortal(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const wave = Math.sin(x * 0.7 + y * 0.5);
+        let c = '#6b21a8';
+        if (wave > 0.5) c = '#a855f7';
+        else if (wave < -0.5) c = '#4c1d95';
+        else if (wave > 0.2) c = '#8b5cf6';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderChest(sideIdx: number, topIdx: number, frontIdx: number) {
+    // Top
+    const [tx, ty] = this.getTileCoord(topIdx);
+    this.ctx.fillStyle = '#8d5a2d';
+    this.ctx.fillRect(tx, ty, 16, 16);
+    this.ctx.fillStyle = '#3a2310';
+    this.ctx.strokeRect(tx + 0.5, ty + 0.5, 15, 15);
+
+    // Side
+    const [sx, sy] = this.getTileCoord(sideIdx);
+    this.ctx.fillStyle = '#8d5a2d';
+    this.ctx.fillRect(sx, sy, 16, 16);
+    this.ctx.fillStyle = '#3a2310';
+    this.ctx.strokeRect(sx + 0.5, sy + 0.5, 15, 15);
+    this.ctx.fillRect(sx, sy + 5, 16, 1);
+
+    // Front (with lock clasp)
+    const [fx, fy] = this.getTileCoord(frontIdx);
+    this.ctx.fillStyle = '#8d5a2d';
+    this.ctx.fillRect(fx, fy, 16, 16);
+    this.ctx.fillStyle = '#3a2310';
+    this.ctx.strokeRect(fx + 0.5, fy + 0.5, 15, 15);
+    this.ctx.fillRect(fx, fy + 5, 16, 1);
+    // Silver clasp
+    this.ctx.fillStyle = '#e2e8f0';
+    this.ctx.fillRect(fx + 7, fy + 4, 2, 4);
+    this.ctx.fillStyle = '#1e293b';
+    this.ctx.fillRect(fx + 7.5, fy + 5.5, 1, 1.5);
+  }
+
+  private renderSpawner(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    this.ctx.fillStyle = '#1e293b';
+    this.ctx.fillRect(tx, ty, 16, 16);
+    // Iron cage bars
+    this.ctx.fillStyle = '#475569';
+    this.ctx.strokeRect(tx + 0.5, ty + 0.5, 15, 15);
+    for (let i = 3; i < 15; i += 3) {
+      this.ctx.fillRect(tx + i, ty, 1, 16);
+      this.ctx.fillRect(tx, ty + i, 16, 1);
+    }
+    // Glowing fiery core inside
+    this.ctx.fillStyle = '#ea580c';
+    this.ctx.fillRect(tx + 6, ty + 6, 4, 4);
+    this.ctx.fillStyle = '#fde047';
+    this.ctx.fillRect(tx + 7, ty + 7, 2, 2);
+  }
+
+  private renderTool(idx: number, tool: 'sword' | 'pickaxe' | 'shovel' | 'axe' | 'hoe' | 'flint_and_steel') {
+    const [tx, ty] = this.getTileCoord(idx);
+    this.ctx.clearRect(tx, ty, 16, 16);
+
+    const stick = '#78350f';
+    const stickDark = '#451a03';
+    const dia = '#38bdf8';
+    const diaLight = '#e0f2fe';
+    const diaDark = '#0284c7';
+
+    if (tool === 'sword') {
+      // Handle
+      this.ctx.fillStyle = stickDark;
+      this.ctx.fillRect(tx + 2, ty + 13, 2, 2);
+      this.ctx.fillStyle = stick;
+      this.ctx.fillRect(tx + 3, ty + 12, 2, 2);
+      // Guard
+      this.ctx.fillStyle = diaDark;
+      this.ctx.fillRect(tx + 3, ty + 11, 4, 2);
+      this.ctx.fillRect(tx + 4, ty + 10, 2, 4);
+      // Blade
+      for (let i = 0; i < 8; i++) {
+        this.ctx.fillStyle = dia;
+        this.ctx.fillRect(tx + 5 + i, ty + 9 - i, 2, 2);
+        this.ctx.fillStyle = diaLight;
+        this.ctx.fillRect(tx + 5 + i, ty + 9 - i, 1, 1);
+      }
+      this.ctx.fillStyle = diaLight;
+      this.ctx.fillRect(tx + 13, ty + 1, 2, 2);
+    } else if (tool === 'pickaxe') {
+      // Diagonal Handle
+      for (let i = 0; i < 9; i++) {
+        this.ctx.fillStyle = (i % 2 === 0) ? stick : stickDark;
+        this.ctx.fillRect(tx + 2 + i, ty + 13 - i, 2, 2);
+      }
+      // Pick Head Arc
+      this.ctx.fillStyle = diaDark;
+      this.ctx.fillRect(tx + 8, ty + 2, 6, 2);
+      this.ctx.fillRect(tx + 13, ty + 3, 2, 5);
+      this.ctx.fillStyle = dia;
+      this.ctx.fillRect(tx + 6, ty + 3, 6, 2);
+      this.ctx.fillRect(tx + 12, ty + 4, 2, 6);
+      this.ctx.fillStyle = diaLight;
+      this.ctx.fillRect(tx + 5, ty + 4, 2, 2);
+      this.ctx.fillRect(tx + 13, ty + 9, 2, 2);
+    } else if (tool === 'shovel') {
+      for (let i = 0; i < 9; i++) {
+        this.ctx.fillStyle = stick;
+        this.ctx.fillRect(tx + 2 + i, ty + 13 - i, 2, 2);
+      }
+      // Spade Head
+      this.ctx.fillStyle = diaDark;
+      this.ctx.fillRect(tx + 9, ty + 3, 4, 4);
+      this.ctx.fillStyle = dia;
+      this.ctx.fillRect(tx + 10, ty + 2, 4, 4);
+      this.ctx.fillStyle = diaLight;
+      this.ctx.fillRect(tx + 11, ty + 2, 2, 2);
+    } else if (tool === 'axe') {
+      for (let i = 0; i < 9; i++) {
+        this.ctx.fillStyle = stick;
+        this.ctx.fillRect(tx + 2 + i, ty + 13 - i, 2, 2);
+      }
+      // Axe Blade
+      this.ctx.fillStyle = diaDark;
+      this.ctx.fillRect(tx + 8, ty + 2, 5, 5);
+      this.ctx.fillStyle = dia;
+      this.ctx.fillRect(tx + 9, ty + 1, 4, 4);
+      this.ctx.fillRect(tx + 7, ty + 3, 3, 3);
+      this.ctx.fillStyle = diaLight;
+      this.ctx.fillRect(tx + 10, ty + 1, 2, 2);
+    } else if (tool === 'hoe') {
+      for (let i = 0; i < 9; i++) {
+        this.ctx.fillStyle = stick;
+        this.ctx.fillRect(tx + 2 + i, ty + 13 - i, 2, 2);
+      }
+      // Hoe Blade
+      this.ctx.fillStyle = diaDark;
+      this.ctx.fillRect(tx + 9, ty + 3, 5, 3);
+      this.ctx.fillStyle = dia;
+      this.ctx.fillRect(tx + 8, ty + 2, 6, 2);
+      this.ctx.fillStyle = diaLight;
+      this.ctx.fillRect(tx + 8, ty + 2, 2, 1);
+    } else if (tool === 'flint_and_steel') {
+      // Steel striker curve
+      this.ctx.fillStyle = '#cbd5e1';
+      this.ctx.fillRect(tx + 4, ty + 4, 8, 2);
+      this.ctx.fillRect(tx + 10, ty + 6, 2, 6);
+      this.ctx.fillRect(tx + 4, ty + 10, 8, 2);
+      // Flint piece
+      this.ctx.fillStyle = '#1e293b';
+      this.ctx.fillRect(tx + 5, ty + 6, 4, 4);
+    }
+  }
+
+  // --- CAVE VEIN BLOCKS ---
+
+  private renderGranite(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    const colors = ['#955747', '#a16455', '#b47060', '#c27e6e', '#854b3d', '#d49080'];
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const hash = Math.sin(x * 12.9898 + y * 78.233 + 1.2) * 43758.5453;
+        const color = colors[Math.floor(Math.abs(hash) * colors.length) % colors.length];
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderAndesite(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    const colors = ['#6e6e70', '#7b7b7d', '#888889', '#959596', '#5f5f61'];
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const hash = Math.sin(x * 14.123 + y * 65.432 + 3.4) * 43758.5453;
+        const color = colors[Math.floor(Math.abs(hash) * colors.length) % colors.length];
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderDiorite(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    const colors = ['#dedede', '#cccccc', '#b4b4b4', '#555555', '#333333', '#ffffff'];
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const hash = Math.sin(x * 19.821 + y * 43.123 + 5.6) * 43758.5453;
+        const color = colors[Math.floor(Math.abs(hash) * colors.length) % colors.length];
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  // --- FROZEN ICE CAVE BLOCKS ---
+
+  private renderPackedIce(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    // Vibrant deep icy crystalline blue with white fractures
+    const blues = ['#8db5e8', '#7faee6', '#6ea1df', '#a0c4f0', '#5f91d0'];
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const hash = Math.sin(x * 15.7 + y * 31.2 + 8.1) * 43758.5453;
+        const c = blues[Math.floor(Math.abs(hash) * blues.length) % blues.length];
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+    // Subtle crystalline fracture lines
+    this.ctx.fillStyle = '#dbeafe';
+    this.ctx.fillRect(tx + 2, ty + 2, 4, 1);
+    this.ctx.fillRect(tx + 5, ty + 3, 3, 1);
+    this.ctx.fillRect(tx + 7, ty + 4, 1, 3);
+    this.ctx.fillRect(tx + 10, ty + 8, 4, 1);
+    this.ctx.fillRect(tx + 13, ty + 9, 2, 2);
+    this.ctx.fillRect(tx + 3, ty + 11, 5, 1);
+    this.ctx.fillRect(tx + 7, ty + 12, 1, 3);
+  }
+
+  private renderBlueIcicle(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    this.ctx.clearRect(tx, ty, 16, 16);
+    // Tapering downward crystalline icicle / stalactite
+    const shades = ['#60a5fa', '#93c5fd', '#bfdbfe', '#dbeafe'];
+    for (let y = 0; y < 16; y++) {
+      const halfWidth = Math.max(1, Math.floor((16 - y) / 4) + 1);
+      const startX = 8 - halfWidth;
+      const width = halfWidth * 2;
+      for (let x = startX; x < startX + width; x++) {
+        const hash = Math.sin(x * 7.1 + y * 11.3) * 43758.5453;
+        const color = shades[Math.floor(Math.abs(hash) * shades.length) % shades.length];
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  // --- THE SIFT DIMENSION BLOCKS ---
+
+  private renderSiftstone(topIdx: number, sideIdx: number, botIdx: number) {
+    const [ttx, tty] = this.getTileCoord(topIdx);
+    const [stx, sty] = this.getTileCoord(sideIdx);
+    const [btx, bty] = this.getTileCoord(botIdx);
+
+    // 1. Siftstone Top: Lush bubblegum vibrant pink grass (as in image 1 & user link)
+    const pinkPinks = ['#f472b6', '#ec4899', '#db2777', '#fbcfe8', '#f9a8d4', '#e11d48'];
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const hash = Math.sin(x * 23.41 + y * 67.89 + 4.2) * 43758.5453;
+        const color = pinkPinks[Math.floor(Math.abs(hash) * pinkPinks.length) % pinkPinks.length];
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(ttx + x, tty + y, 1, 1);
+      }
+    }
+
+    // 2. Siftstone Bottom: Pale pinkish-white mineral strata
+    const paleStones = ['#f5e6eb', '#eed7df', '#e4c4d0', '#dfb8c7', '#fdf2f6'];
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const hash = Math.sin(x * 18.23 + y * 49.12 + 9.5) * 43758.5453;
+        const color = paleStones[Math.floor(Math.abs(hash) * paleStones.length) % paleStones.length];
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(btx + x, bty + y, 1, 1);
+      }
+    }
+
+    // 3. Siftstone Side: Pale stone with pink grass turf overhang
+    // Base pale stone
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const hash = Math.sin(x * 18.23 + y * 49.12 + 9.5) * 43758.5453;
+        const color = paleStones[Math.floor(Math.abs(hash) * paleStones.length) % paleStones.length];
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(stx + x, sty + y, 1, 1);
+      }
+    }
+    // Top pink turf layer (2-4 pixels deep with drip teeth)
+    for (let x = 0; x < 16; x++) {
+      const drip = 2 + Math.floor(Math.abs(Math.sin(x * 1.5)) * 3);
+      for (let y = 0; y < drip; y++) {
+        const hash = Math.sin(x * 23.41 + y * 67.89 + 4.2) * 43758.5453;
+        const color = pinkPinks[Math.floor(Math.abs(hash) * pinkPinks.length) % pinkPinks.length];
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(stx + x, sty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderWillowBush(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    this.ctx.clearRect(tx, ty, 16, 16);
+
+    // Lush tall pink blades & leaves (just like image 1!)
+    const pinks = ['#f472b6', '#ec4899', '#db2777', '#fb7185', '#fda4af', '#f43f5e'];
+
+    // Draw bush blade clusters
+    for (let x = 1; x < 15; x++) {
+      const height = 9 + Math.floor(Math.abs(Math.sin(x * 1.2)) * 6);
+      const startY = 16 - height;
+      for (let y = startY; y < 16; y++) {
+        // Natural foliage gaps
+        if (y === startY && (x % 2 === 0)) continue;
+        const hash = Math.sin(x * 31.7 + y * 13.9 + 2.1) * 43758.5453;
+        const color = pinks[Math.floor(Math.abs(hash) * pinks.length) % pinks.length];
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderWillowLog(sideIdx: number, topIdx: number) {
+    const [stx, sty] = this.getTileCoord(sideIdx);
+    const [ttx, tty] = this.getTileCoord(topIdx);
+
+    // Willow Log Side: Smooth chalk-white wood with soft silvery grain and gray notches
+    const whites = ['#ffffff', '#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1'];
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const hash = Math.sin(x * 11.2 + y * 94.1) * 43758.5453;
+        const color = whites[Math.floor(Math.abs(hash) * whites.length) % whites.length];
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(stx + x, sty + y, 1, 1);
+      }
+    }
+    // Gray bark fissures
+    this.ctx.fillStyle = '#64748b';
+    this.ctx.fillRect(stx + 3, sty + 4, 3, 1);
+    this.ctx.fillRect(stx + 4, sty + 5, 2, 1);
+    this.ctx.fillRect(stx + 10, sty + 10, 4, 1);
+    this.ctx.fillRect(stx + 11, sty + 11, 2, 1);
+
+    // Willow Log Top: Concentric rings on white/cream wood
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const dx = x - 7.5;
+        const dy = y - 7.5;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > 7) {
+          this.ctx.fillStyle = '#cbd5e1'; // outer bark ring
+        } else if (dist > 4 && dist <= 5) {
+          this.ctx.fillStyle = '#e2e8f0'; // middle ring
+        } else if (dist > 1 && dist <= 2) {
+          this.ctx.fillStyle = '#e2e8f0'; // inner ring
+        } else {
+          this.ctx.fillStyle = '#f8fafc'; // light wood body
+        }
+        this.ctx.fillRect(ttx + x, tty + y, 1, 1);
+      }
+    }
+  }
+
+  // Caching 16x16 data URLs for UI icons
+  private dataUrlCache = new Map<number, string>();
+
+  public getTileDataUrl(tileIndex: number): string {
+    const cached = this.dataUrlCache.get(tileIndex);
+    if (cached) return cached;
+
+    const [tx, ty] = this.getTileCoord(tileIndex);
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = 16;
+    tempCanvas.height = 16;
+    const tempCtx = tempCanvas.getContext('2d');
+    if (tempCtx) {
+      tempCtx.imageSmoothingEnabled = false;
+      tempCtx.drawImage(this.canvas, tx, ty, 16, 16, 0, 0, 16, 16);
+      const url = tempCanvas.toDataURL('image/png');
+      this.dataUrlCache.set(tileIndex, url);
+      return url;
+    }
+    return '';
+  }
 }
 
 // Global singleton texture atlas
@@ -692,4 +1301,10 @@ export function getTextureAtlas(): TextureAtlas {
     globalAtlasInstance = new TextureAtlas();
   }
   return globalAtlasInstance;
+}
+
+export function getBlockSprite(blockId: BlockType): string {
+  const atlas = getTextureAtlas();
+  const faceIdx = getFaceTextureIndex(blockId, 'north');
+  return atlas.getTileDataUrl(faceIdx);
 }

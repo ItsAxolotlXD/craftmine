@@ -127,6 +127,59 @@ export class ParticleSystem {
     }
   }
 
+  // Spawn fiery explosion / portal burst particles
+  public spawnExplosion(x: number, y: number, z: number) {
+    const explosionColors = [
+      new THREE.Color(0xffffff),
+      new THREE.Color(0xfacc15),
+      new THREE.Color(0xf97316),
+      new THREE.Color(0xef4444),
+      new THREE.Color(0xa855f7), // Nether purple sparks
+    ];
+
+    const burstCount = 36;
+    let spawned = 0;
+
+    for (let i = 0; i < this.maxParticles && spawned < burstCount; i++) {
+      const p = this.particles[i];
+      if (!p.active) {
+        p.active = true;
+        p.x = x + (Math.random() - 0.5) * 0.6;
+        p.y = y + (Math.random() - 0.5) * 0.6;
+        p.z = z + (Math.random() - 0.5) * 0.6;
+
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+        const speed = 3.5 + Math.random() * 5.0;
+
+        p.vx = speed * Math.sin(phi) * Math.cos(theta);
+        p.vy = speed * Math.cos(phi) + 1.2;
+        p.vz = speed * Math.sin(phi) * Math.sin(theta);
+
+        p.rx = Math.random() * Math.PI;
+        p.ry = Math.random() * Math.PI;
+        p.rz = Math.random() * Math.PI;
+        p.vrx = (Math.random() - 0.5) * 16;
+        p.vry = (Math.random() - 0.5) * 16;
+        p.vrz = (Math.random() - 0.5) * 16;
+
+        p.life = 0;
+        p.maxLife = 0.5 + Math.random() * 0.4;
+        p.scale = 0.9 + Math.random() * 0.7;
+
+        const col = explosionColors[Math.floor(Math.random() * explosionColors.length)];
+        p.color.copy(col);
+
+        this.mesh.setColorAt(i, p.color);
+        spawned++;
+      }
+    }
+
+    if (this.mesh.instanceColor) {
+      this.mesh.instanceColor.needsUpdate = true;
+    }
+  }
+
   public update(dt: number) {
     const gravity = -18.0;
     let anyNeedsUpdate = false;
