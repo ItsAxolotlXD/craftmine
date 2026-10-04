@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: 'Minecraft';
+  src: url('/minecraft.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+}
+
+body {
+  font-family: 'Minecraft', 'VT323', monospace;
+  image-rendering: pixelated;
+}
+
+.font-minecraft {
+  font-family: 'Minecraft', 'VT323', monospace;
+}
+
+/* Authentic Minecraft text shadow style */
+.mc-shadow {
+  text-shadow: 2px 2px 0px #1e1e1e;
+}
