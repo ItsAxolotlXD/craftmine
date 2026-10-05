@@ -107,11 +107,10 @@ export class Chunk {
 
           const isWater = (block === BlockType.WATER);
 
-          // Handle special non-cube blocks (flowers, mushrooms, torches, cave vines, dripleaf, willow bush)
+          // Handle special non-cube blocks (flowers, mushrooms, torches, cave vines, dripleaf)
           if (block === BlockType.FLOWER_RED || block === BlockType.FLOWER_YELLOW ||
               block === BlockType.MUSHROOM || block === BlockType.TORCH ||
-              block === BlockType.CAVE_VINES || block === BlockType.DRIPLEAF ||
-              block === BlockType.WILLOW_BUSH) {
+              block === BlockType.CAVE_VINES || block === BlockType.DRIPLEAF) {
             this.buildCrossedQuad(
               x, y, z, block, atlas,
               positions, normals, uvs, colors, indices,

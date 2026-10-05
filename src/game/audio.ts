@@ -304,8 +304,8 @@ class SoundEngine {
     noise.start(t);
   }
 
-  // Animal & Sift mob ambient sounds
-  public playAnimalSound(type: string) {
+  // Animal ambient sounds
+  public playAnimalSound(type: 'pig' | 'cow' | 'sheep' | 'chicken' | 'frog') {
     if (!this.enabled || this.volume <= 0) return;
     this.initCtx();
     if (!this.ctx || !this.masterGain) return;
@@ -313,139 +313,6 @@ class SoundEngine {
     const t = this.ctx.currentTime;
 
     switch (type) {
-      case 'willow_wisp': {
-        // Ethereal crystal bell chime
-        const osc = this.ctx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(659.25, t); // E5
-        osc.frequency.exponentialRampToValueAtTime(880, t + 0.15); // A5
-
-        const gain = this.ctx.createGain();
-        gain.gain.setValueAtTime(0.15, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-
-        osc.connect(gain);
-        gain.connect(this.masterGain);
-        osc.start(t);
-        osc.stop(t + 0.36);
-        break;
-      }
-
-      case 'sift_strider': {
-        // Soft harmonic flute chirp
-        const osc = this.ctx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(320, t);
-        osc.frequency.linearRampToValueAtTime(440, t + 0.08);
-        osc.frequency.exponentialRampToValueAtTime(260, t + 0.22);
-
-        const gain = this.ctx.createGain();
-        gain.gain.setValueAtTime(0.18, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
-
-        osc.connect(gain);
-        gain.connect(this.masterGain);
-        osc.start(t);
-        osc.stop(t + 0.26);
-        break;
-      }
-
-      case 'sift_golem': {
-        // Low resonant stone rumble
-        const osc = this.ctx.createOscillator();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(85, t);
-        osc.frequency.exponentialRampToValueAtTime(50, t + 0.35);
-
-        const gain = this.ctx.createGain();
-        gain.gain.setValueAtTime(0.24, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
-
-        osc.connect(gain);
-        gain.connect(this.masterGain);
-        osc.start(t);
-        osc.stop(t + 0.4);
-        break;
-      }
-
-      case 'sift_drake': {
-        // Soft trilling reptilian chirp
-        const osc = this.ctx.createOscillator();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(580, t);
-        osc.frequency.linearRampToValueAtTime(420, t + 0.12);
-
-        const filter = this.ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(900, t);
-
-        const gain = this.ctx.createGain();
-        gain.gain.setValueAtTime(0.14, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
-
-        osc.connect(filter);
-        filter.connect(gain);
-        gain.connect(this.masterGain);
-        osc.start(t);
-        osc.stop(t + 0.16);
-        break;
-      }
-
-      case 'sift_stag': {
-        // Resonant hollow wood call
-        const osc = this.ctx.createOscillator();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(180, t);
-        osc.frequency.linearRampToValueAtTime(220, t + 0.15);
-        osc.frequency.exponentialRampToValueAtTime(140, t + 0.4);
-
-        const gain = this.ctx.createGain();
-        gain.gain.setValueAtTime(0.2, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.42);
-
-        osc.connect(gain);
-        gain.connect(this.masterGain);
-        osc.start(t);
-        osc.stop(t + 0.45);
-        break;
-      }
-
-      case 'sift_fox': {
-        // Playful high-pitched yip
-        const osc = this.ctx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(520, t);
-        osc.frequency.exponentialRampToValueAtTime(780, t + 0.08);
-
-        const gain = this.ctx.createGain();
-        gain.gain.setValueAtTime(0.16, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
-
-        osc.connect(gain);
-        gain.connect(this.masterGain);
-        osc.start(t);
-        osc.stop(t + 0.11);
-        break;
-      }
-
-      case 'sift_bunny': {
-        // Tiny gentle squeak
-        const osc = this.ctx.createOscillator();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(700, t);
-        osc.frequency.linearRampToValueAtTime(850, t + 0.06);
-
-        const gain = this.ctx.createGain();
-        gain.gain.setValueAtTime(0.12, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
-
-        osc.connect(gain);
-        gain.connect(this.masterGain);
-        osc.start(t);
-        osc.stop(t + 0.09);
-        break;
-      }
-
       case 'frog': {
         // Frog ribbit / croak: two quick throaty bass bursts
         const osc = this.ctx.createOscillator();

@@ -99,14 +99,6 @@ export class TextureAtlas {
     this.renderMossBlock(ATLAS_INDEX.MOSS_BLOCK);
     this.renderCaveVines(ATLAS_INDEX.CAVE_VINES);
     this.renderDripleaf(ATLAS_INDEX.DRIPLEAF);
-    this.renderSiftstone(ATLAS_INDEX.SIFTSTONE);
-    this.renderSiftGrassTop(ATLAS_INDEX.SIFT_GRASS_TOP);
-    this.renderSiftGrassSide(ATLAS_INDEX.SIFT_GRASS_SIDE);
-    this.renderWillowLogSide(ATLAS_INDEX.WILLOW_LOG_SIDE);
-    this.renderWillowLogTop(ATLAS_INDEX.WILLOW_LOG_TOP);
-    this.renderWillowLeaves(ATLAS_INDEX.WILLOW_LEAVES);
-    this.renderWillowBush(ATLAS_INDEX.WILLOW_BUSH);
-    this.renderSiftPortal(ATLAS_INDEX.SIFT_PORTAL);
     this.renderLeaves(ATLAS_INDEX.PINE_LEAVES, '#22482e', '#173621', '#346142');
     this.renderLeaves(ATLAS_INDEX.LEAVES_RED, '#b22222', '#7f1d1d', '#dc2626');
     this.renderLeaves(ATLAS_INDEX.LEAVES_ORANGE, '#d97706', '#b45309', '#f59e0b');
@@ -144,14 +136,11 @@ export class TextureAtlas {
 
   // Load and blit official Minecraft textures with biome grass tint
   private loadOfficialTextures() {
-    const texturesToLoad: { url: string; idx: number; tint?: [number, number, number]; tintGrassFringe?: [number, number, number] }[] = [
+    const texturesToLoad: { url: string; idx: number; isGrassTop?: boolean }[] = [
       { url: '/textures/stone.png', idx: ATLAS_INDEX.STONE },
       { url: '/textures/dirt.png', idx: ATLAS_INDEX.DIRT },
       { url: '/textures/grass_side.png', idx: ATLAS_INDEX.GRASS_SIDE },
-      { url: '/textures/grass_side.png', idx: ATLAS_INDEX.FALL_GRASS_SIDE, tintGrassFringe: [224, 76, 28] }, // Fall forest red grass side overlay
-      { url: '/textures/grass_top.png', idx: ATLAS_INDEX.GRASS_TOP, tint: [121, 192, 90] },
-      { url: '/textures/grass_top.png', idx: ATLAS_INDEX.FALL_GRASS_TOP, tint: [224, 76, 28] }, // Fall forest red overlay
-      { url: '/textures/grass_top.png', idx: ATLAS_INDEX.SIFT_GRASS_TOP, tint: [244, 114, 182] }, // Sift grass pink overlay
+      { url: '/textures/grass_top.png', idx: ATLAS_INDEX.GRASS_TOP, isGrassTop: true },
       { url: '/textures/leaves_oak.png', idx: ATLAS_INDEX.OAK_LEAVES },
       { url: '/textures/leaves_red.png', idx: ATLAS_INDEX.LEAVES_RED },
       { url: '/textures/leaves_orange.png', idx: ATLAS_INDEX.LEAVES_ORANGE },
@@ -189,12 +178,6 @@ export class TextureAtlas {
       { url: '/textures/moss_block.png', idx: ATLAS_INDEX.MOSS_BLOCK },
       { url: '/textures/cave_vines.png', idx: ATLAS_INDEX.CAVE_VINES },
       { url: '/textures/big_dripleaf_top.png', idx: ATLAS_INDEX.DRIPLEAF },
-      { url: '/textures/sift_grass_side.png', idx: ATLAS_INDEX.SIFT_GRASS_SIDE },
-      { url: '/textures/sift_stone.png', idx: ATLAS_INDEX.SIFTSTONE },
-      { url: '/textures/willow_log.png', idx: ATLAS_INDEX.WILLOW_LOG_SIDE },
-      { url: '/textures/willow_log.png', idx: ATLAS_INDEX.WILLOW_LOG_TOP },
-      { url: '/textures/willow_leaves.png', idx: ATLAS_INDEX.WILLOW_LEAVES },
-      { url: '/textures/willow_bush.png', idx: ATLAS_INDEX.WILLOW_BUSH },
       { url: '/textures/tnt_side.png', idx: ATLAS_INDEX.TNT_SIDE },
       { url: '/textures/tnt_top.png', idx: ATLAS_INDEX.TNT_TOP },
       { url: '/textures/torch.png', idx: ATLAS_INDEX.TORCH },
@@ -209,40 +192,17 @@ export class TextureAtlas {
         this.ctx.clearRect(tx, ty, 16, 16);
         this.ctx.drawImage(img, tx, ty, 16, 16);
 
-        if (item.tint) {
+        if (item.isGrassTop) {
+          // Apply biome color overlay to grayscale grass_top (Plains green: #79c05a)
           const imgData = this.ctx.getImageData(tx, ty, 16, 16);
           const data = imgData.data;
-          const [tR, tG, tB] = item.tint;
-          const tintR = tR / 255;
-          const tintG = tG / 255;
-          const tintB = tB / 255;
+          const tintR = 121 / 255;
+          const tintG = 192 / 255;
+          const tintB = 90 / 255;
           for (let p = 0; p < data.length; p += 4) {
             data[p] = Math.round(data[p] * tintR);
             data[p + 1] = Math.round(data[p + 1] * tintG);
             data[p + 2] = Math.round(data[p + 2] * tintB);
-          }
-          this.ctx.putImageData(imgData, tx, ty);
-        }
-
-        if (item.tintGrassFringe) {
-          const imgData = this.ctx.getImageData(tx, ty, 16, 16);
-          const data = imgData.data;
-          const [tR, tG, tB] = item.tintGrassFringe;
-          const tintR = tR / 255;
-          const tintG = tG / 255;
-          const tintB = tB / 255;
-          for (let py = 0; py < 16; py++) {
-            for (let px = 0; px < 16; px++) {
-              const p = (py * 16 + px) * 4;
-              const r = data[p];
-              const g = data[p + 1];
-              const b = data[p + 2];
-              if (py <= 5 && (g >= r || (Math.abs(r - g) < 20 && Math.abs(g - b) < 20))) {
-                data[p] = Math.round(r * tintR);
-                data[p + 1] = Math.round(g * tintG);
-                data[p + 2] = Math.round(b * tintB);
-              }
-            }
           }
           this.ctx.putImageData(imgData, tx, ty);
         }
@@ -966,116 +926,6 @@ export class TextureAtlas {
     this.ctx.fillRect(tx + 3, ty + 1, 10, 2);
     this.ctx.fillStyle = '#3f6212';
     this.ctx.fillRect(tx + 2, ty + 6, 12, 1);
-  }
-
-  private renderSiftstone(idx: number) {
-    const [tx, ty] = this.getTileCoord(idx);
-    for (let y = 0; y < 16; y++) {
-      for (let x = 0; x < 16; x++) {
-        const n = this.hash2(x, y, 61);
-        let c = '#d89aa8';
-        if (n < 0.2) c = '#c48594';
-        else if (n > 0.8) c = '#eab8c4';
-        else if (n > 0.6) c = '#e2abb8';
-        this.ctx.fillStyle = c;
-        this.ctx.fillRect(tx + x, ty + y, 1, 1);
-      }
-    }
-  }
-
-  private renderSiftGrassSide(idx: number) {
-    this.renderSiftstone(idx);
-    const [tx, ty] = this.getTileCoord(idx);
-    for (let x = 0; x < 16; x++) {
-      const drop = Math.floor(this.hash2(x, 0, 62) * 3) + 3;
-      for (let y = 0; y <= drop; y++) {
-        const n = this.hash2(x, y, 63);
-        let c = '#f472b6';
-        if (y === drop) c = '#db2777';
-        else if (n > 0.75) c = '#f9a8d4';
-        else if (n < 0.25) c = '#ec4899';
-        this.ctx.fillStyle = c;
-        this.ctx.fillRect(tx + x, ty + y, 1, 1);
-      }
-    }
-  }
-
-  private renderSiftGrassTop(idx: number) {
-    const [tx, ty] = this.getTileCoord(idx);
-    for (let y = 0; y < 16; y++) {
-      for (let x = 0; x < 16; x++) {
-        const n = this.hash2(x, y, 64);
-        let c = '#f472b6';
-        if (n < 0.2) c = '#ec4899';
-        else if (n > 0.8) c = '#fbcfe8';
-        else if (n > 0.6) c = '#f9a8d4';
-        this.ctx.fillStyle = c;
-        this.ctx.fillRect(tx + x, ty + y, 1, 1);
-      }
-    }
-  }
-
-  private renderWillowLogSide(idx: number) {
-    const [tx, ty] = this.getTileCoord(idx);
-    for (let y = 0; y < 16; y++) {
-      for (let x = 0; x < 16; x++) {
-        const n = this.hash2(x, y, 65);
-        let c = '#e2e8f0';
-        if (n < 0.2) c = '#cbd5e1';
-        else if (n > 0.8) c = '#f8fafc';
-        else if (n < 0.4 && x % 4 === 0) c = '#94a3b8';
-        this.ctx.fillStyle = c;
-        this.ctx.fillRect(tx + x, ty + y, 1, 1);
-      }
-    }
-  }
-
-  private renderWillowLogTop(idx: number) {
-    const [tx, ty] = this.getTileCoord(idx);
-    for (let y = 0; y < 16; y++) {
-      for (let x = 0; x < 16; x++) {
-        const dx = x - 7.5;
-        const dy = y - 7.5;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        let c = '#f1f5f9';
-        if (dist > 6) c = '#cbd5e1';
-        else if (Math.abs(dist - 3.5) < 0.7) c = '#e2e8f0';
-        this.ctx.fillStyle = c;
-        this.ctx.fillRect(tx + x, ty + y, 1, 1);
-      }
-    }
-  }
-
-  private renderWillowLeaves(idx: number) {
-    this.renderLeaves(idx, '#f8fafc', '#e2e8f0', '#ffffff');
-  }
-
-  private renderWillowBush(idx: number) {
-    const [tx, ty] = this.getTileCoord(idx);
-    this.ctx.clearRect(tx, ty, 16, 16);
-    for (let i = 0; i < 9; i++) {
-      const bx = 3 + (i % 3) * 4;
-      const h = 5 + Math.floor(this.hash2(i, 0, 66) * 9);
-      for (let y = 16 - h; y < 16; y++) {
-        this.ctx.fillStyle = y < 16 - h + 3 ? '#f9a8d4' : '#ec4899';
-        this.ctx.fillRect(tx + bx, ty + y, 2, 1);
-      }
-    }
-  }
-
-  private renderSiftPortal(idx: number) {
-    const [tx, ty] = this.getTileCoord(idx);
-    for (let y = 0; y < 16; y++) {
-      for (let x = 0; x < 16; x++) {
-        const n = this.hash2(x, y, 67);
-        let c = '#d946ef';
-        if (n < 0.25) c = '#a855f7';
-        else if (n > 0.8) c = '#f472b6';
-        else if (n > 0.6) c = '#e879f9';
-        this.ctx.fillStyle = c;
-        this.ctx.fillRect(tx + x, ty + y, 1, 1);
-      }
-    }
   }
 
   private renderCactus(sideIdx: number, topIdx: number) {

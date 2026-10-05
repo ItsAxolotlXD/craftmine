@@ -50,13 +50,9 @@ export class WorldGenerator {
    * Evaluates the biome at world coordinates (x, z).
    */
   public getBiomeAt(x: number, z: number): BiomeType {
-    // Multi-octave continental noise + harmonic wave ensuring truly infinite landmasses & interspersed seas
-    const c1 = this.noise.noise2D(x * 0.003, z * 0.003);
-    const c2 = this.noise.noise2D(x * 0.0075 + 100, z * 0.0075 + 100) * 0.35;
-    const wave = (Math.sin(x * 0.0018) + Math.cos(z * 0.0018)) * 0.20;
-    const cont = c1 + c2 + wave;
-    if (cont < -0.54) return BiomeType.OCEAN;
-    if (cont > 0.42) return BiomeType.MOUNTAINS;
+    const cont = (this.noise.noise2D(x * 0.0016, z * 0.0016) + 1.0) * 0.5;
+    if (cont < 0.32) return BiomeType.OCEAN;
+    if (cont > 0.52) return BiomeType.MOUNTAINS;
 
     // Biome climate maps
     const temp = this.noise.noise2D(x * 0.0022 + 200, z * 0.0022 + 200);
@@ -94,10 +90,7 @@ export class WorldGenerator {
     biome: BiomeType;
   } {
     const biome = this.getBiomeAt(x, z);
-    const c1 = this.noise.noise2D(x * 0.003, z * 0.003);
-    const c2 = this.noise.noise2D(x * 0.0075 + 100, z * 0.0075 + 100) * 0.35;
-    const wave = (Math.sin(x * 0.0018) + Math.cos(z * 0.0018)) * 0.20;
-    const cont = c1 + c2 + wave;
+    const cont = (this.noise.noise2D(x * 0.0016, z * 0.0016) + 1.0) * 0.5;
     const baseH = 43 + this.noise.fbm2D(x * 0.006, z * 0.006, 3, 2.0, 0.5) * 8;
 
     let h = baseH;
@@ -105,10 +98,10 @@ export class WorldGenerator {
     let isOcean = (biome === BiomeType.OCEAN);
 
     if (isOcean) {
-      const oceanDepth = Math.pow(Math.max(0, (-0.54 - cont) / 0.46), 1.2) * 18;
-      h = Math.max(22, baseH - oceanDepth - 6);
+      const oceanDepth = Math.pow((0.32 - cont) / 0.32, 1.3) * 26;
+      h = Math.max(16, baseH - oceanDepth - 10);
     } else if (isMountain) {
-      const mWeight = Math.min(1.0, (cont - 0.35) / 0.25);
+      const mWeight = Math.min(1.0, (cont - 0.44) / 0.22);
       const ridge = this.noise.ridged2D(x * 0.0055, z * 0.0055, 4, 2.0, 0.55);
       const peaks = Math.pow(Math.max(0, ridge), 1.8) * 58;
       h += peaks * mWeight;
@@ -216,8 +209,7 @@ export class WorldGenerator {
   }
 
   /**
-   * Balanced cave generation with natural caverns, tunnels, and ravines.
-   * Decreased from overly massive size to well-proportioned, comfortable grottos and tunnels.
+   * Massive cave generation with vaulted cheese chambers, wide tunnels, and vertical ravines.
    */
   public isCave(x: number, y: number, z: number, terrainH: number): boolean {
     if (y <= 2) return false;
@@ -225,38 +217,39 @@ export class WorldGenerator {
 
     const depthBelowSurface = terrainH - y;
     // Cave entrances piercing mountain cliffs, hills, and ravines
-    if (depthBelowSurface < 5 && y >= SEA_LEVEL) {
+    if (depthBelowSurface < 4 && y >= SEA_LEVEL) {
       const entranceNoise = this.noise.noise2D(x * 0.035, z * 0.035);
-      if (entranceNoise < 0.72) return false;
+      if (entranceNoise < 0.65) return false;
     }
 
-    // 1. Vaulted Cavern Rooms (tuned size: spacious 6-12 blocks high, not massive voids)
-    if (y >= 8 && y <= 46) {
-      const cavern = this.noise.noise3D(x * 0.022, y * 0.028, z * 0.022);
-      const depthBonus = Math.max(0, (40 - y) * 0.002);
-      if (cavern + depthBonus > 0.52) {
-        const pillar = Math.abs(this.noise.noise2D(x * 0.045, z * 0.045));
-        if (!(cavern < 0.60 && pillar < 0.05)) {
+    // 1. Massive Vaulted Cheese Caverns (Monumental subterranean halls up to 25-30 blocks high)
+    if (y >= 8 && y <= 58) {
+      const cavern = this.noise.noise3D(x * 0.012, y * 0.016, z * 0.012);
+      const depthBonus = Math.max(0, (50 - y) * 0.0035);
+      if (cavern + depthBonus > 0.34) {
+        // Natural pillars inside massive cavern chambers
+        const pillar = Math.abs(this.noise.noise2D(x * 0.04, z * 0.04));
+        if (!(cavern < 0.48 && pillar < 0.042)) {
           return true;
         }
       }
     }
 
-    // 2. Winding Cave Tunnels (Natural 3-5 block wide pathways)
-    const c1 = this.noise.noise3D(x * 0.024, y * 0.036, z * 0.024);
-    const c2 = this.noise.noise3D(x * 0.024 + 120, y * 0.036 + 120, z * 0.024 + 120);
-    const widthNoise = this.noise.noise3D(x * 0.018 + 60, y * 0.018 + 60, z * 0.018 + 60);
-    const radiusSq = 0.0034 + Math.max(0, widthNoise * 0.0020);
+    // 2. Wide Spaghetti & Noodle Cave Tunnels (Winding networks connecting chambers)
+    const c1 = this.noise.noise3D(x * 0.018, y * 0.026, z * 0.018);
+    const c2 = this.noise.noise3D(x * 0.018 + 120, y * 0.026 + 120, z * 0.018 + 120);
+    const widthNoise = this.noise.noise3D(x * 0.012 + 60, y * 0.012 + 60, z * 0.012 + 60);
+    const radiusSq = 0.008 + Math.max(0, widthNoise * 0.006);
     if ((c1 * c1 + c2 * c2) < radiusSq) {
       return true;
     }
 
-    // 3. Fissure Ravines
-    if (y >= 14 && y < terrainH - 6) {
-      const ravine = Math.abs(this.noise.noise3D(x * 0.016, y * 0.012, z * 0.016));
-      if (ravine < 0.016) {
-        const ravineW = Math.abs(this.noise.noise2D(x * 0.022 + 80, z * 0.022 + 80));
-        if (ravineW > 0.38) return true;
+    // 3. Huge Vertical Fissure Ravines
+    if (y >= 10 && y < terrainH - 4) {
+      const ravine = Math.abs(this.noise.noise3D(x * 0.014, y * 0.008, z * 0.014));
+      if (ravine < 0.038) {
+        const ravineW = Math.abs(this.noise.noise2D(x * 0.02 + 80, z * 0.02 + 80));
+        if (ravineW > 0.14) return true;
       }
     }
 
@@ -554,48 +547,17 @@ export class WorldGenerator {
                 }
               }
             } else if (caveBiome === CaveBiomeType.ICE) {
-              // 1. Hanging Stalactite Icicles (1 - 15 blocks long)
-              if (blockAbove === BlockType.ICE || blockAbove === BlockType.PACKED_ICE || blockAbove === BlockType.BLUE_ICE || blockAbove === BlockType.STONE || blockAbove === BlockType.SNOW_BLOCK) {
-                const icicleNoise = Math.abs(this.noise.noise2D(wx * 0.45 + 11, wz * 0.45 + 11));
-                if (icicleNoise > 0.48) {
-                  // Measure clear vertical space below
-                  let space = 0;
-                  while (y - space > 4 && this.getVoxel(voxels, lx, y - space, lz) === BlockType.AIR && space < 16) {
-                    space++;
-                  }
-                  if (space >= 2) {
-                    const icicleLen = Math.max(1, Math.min(15, Math.min(space - 1, Math.floor(icicleNoise * 18) - 7)));
-                    for (let s = 0; s < icicleLen; s++) {
-                      let iceBlock = BlockType.ICE;
-                      if (s === 0) iceBlock = (icicleNoise > 0.75) ? BlockType.BLUE_ICE : BlockType.PACKED_ICE;
-                      this.setVoxel(voxels, lx, y - s, lz, iceBlock);
-                    }
-                    continue;
-                  }
+              // 1. Hanging icicles from ceiling
+              if (blockAbove === BlockType.ICE || blockAbove === BlockType.PACKED_ICE || blockAbove === BlockType.BLUE_ICE || blockAbove === BlockType.STONE) {
+                const icicleNoise = this.noise.noise3D(wx * 0.3, y * 0.3, wz * 0.3);
+                if (icicleNoise > 0.55) {
+                  this.setVoxel(voxels, lx, y, lz, icicleNoise > 0.75 ? BlockType.PACKED_ICE : BlockType.ICE);
+                  continue;
                 }
               }
 
-              // 2. Rising Stalagmite Icicles (1 - 15 blocks long)
-              if (blockBelow === BlockType.ICE || blockBelow === BlockType.PACKED_ICE || blockBelow === BlockType.BLUE_ICE || blockBelow === BlockType.STONE || blockBelow === BlockType.SNOW_BLOCK) {
-                const stalagNoise = Math.abs(this.noise.noise2D(wx * 0.45 + 88, wz * 0.45 + 88));
-                if (stalagNoise > 0.50) {
-                  // Measure clear vertical space above
-                  let space = 0;
-                  while (y + space < surfaceH - 1 && this.getVoxel(voxels, lx, y + space, lz) === BlockType.AIR && space < 16) {
-                    space++;
-                  }
-                  if (space >= 2) {
-                    const stalagLen = Math.max(1, Math.min(15, Math.min(space - 1, Math.floor(stalagNoise * 18) - 7)));
-                    for (let s = 0; s < stalagLen; s++) {
-                      let iceBlock = BlockType.ICE;
-                      if (s === 0) iceBlock = (stalagNoise > 0.72) ? BlockType.BLUE_ICE : BlockType.PACKED_ICE;
-                      this.setVoxel(voxels, lx, y + s, lz, iceBlock);
-                    }
-                    continue;
-                  }
-                }
-
-                // Snow on cold ledges
+              // 2. Snow on cold ledges
+              if (blockBelow === BlockType.PACKED_ICE || blockBelow === BlockType.BLUE_ICE || blockBelow === BlockType.STONE) {
                 const snowNoise = this.noise.noise2D(wx * 0.3, wz * 0.3);
                 if (snowNoise > 0.65) {
                   this.setVoxel(voxels, lx, y, lz, BlockType.SNOW_BLOCK);
@@ -692,116 +654,6 @@ export class WorldGenerator {
     }
 
     return voxels;
-  }
-
-  /**
-   * Generates a 3D "The Sift" dimension chunk with floating archipelago islands.
-   */
-  public generateSiftChunk(chunkX: number, chunkZ: number): Uint8Array {
-    const voxels = new Uint8Array(CHUNK_SIZE_X * CHUNK_SIZE_Z * CHUNK_SIZE_Y);
-    const worldStartX = chunkX * CHUNK_SIZE_X;
-    const worldStartZ = chunkZ * CHUNK_SIZE_Z;
-
-    for (let lz = 0; lz < CHUNK_SIZE_Z; lz++) {
-      for (let lx = 0; lx < CHUNK_SIZE_X; lx++) {
-        const wx = worldStartX + lx;
-        const wz = worldStartZ + lz;
-
-        // Floating Islands 3D noise (centered around y = 52)
-        for (let y = 30; y < 80; y++) {
-          const islandNoise = this.noise.noise3D(wx * 0.016, (y - 52) * 0.035, wz * 0.016);
-          const vDist = Math.abs(y - 52) / 22;
-          const density = islandNoise - Math.pow(vDist, 1.85);
-
-          // Center origin chunk (0,0) has guaranteed main island!
-          const isOrigin = (chunkX === 0 && chunkZ === 0);
-          const originBonus = isOrigin && (y >= 45 && y <= 56) && (lx >= 2 && lx <= 13 && lz >= 2 && lz <= 13) ? 0.35 : 0;
-
-          if (density + originBonus > 0.08) {
-            this.setVoxel(voxels, lx, y, lz, BlockType.SIFTSTONE);
-          }
-        }
-
-        // Top surface conversion: Topmost solid block becomes SIFT_GRASS
-        for (let y = 79; y >= 30; y--) {
-          if (this.getVoxel(voxels, lx, y, lz) === BlockType.SIFTSTONE) {
-            const above = this.getVoxel(voxels, lx, y + 1, lz);
-            if (above === BlockType.AIR) {
-              this.setVoxel(voxels, lx, y, lz, BlockType.SIFT_GRASS);
-
-              // Flora on top of Sift Grass (Willow Bush)
-              const floraNoise = Math.abs(this.noise.noise2D(wx * 0.35 + 50, wz * 0.35 + 50));
-              if (floraNoise > 0.62) {
-                this.setVoxel(voxels, lx, y + 1, lz, BlockType.WILLOW_BUSH);
-              }
-
-              // Willow Trees (White wood and white leaves)
-              if (lx >= 2 && lx <= 13 && lz >= 2 && lz <= 13) {
-                const treeNoise = Math.abs(this.noise.noise2D(wx * 0.22 + 88, wz * 0.22 + 88));
-                if (treeNoise > 0.84) {
-                  this.generateWillowTree(voxels, lx, y + 1, lz);
-                }
-              }
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    // Origin island portal in The Sift
-    if (chunkX === 0 && chunkZ === 0) {
-      this.generateSiftPortalStructure(voxels, 6, 56, 6);
-    }
-
-    return voxels;
-  }
-
-  /**
-   * Generates a Willow Tree in The Sift (white wood trunk, luminous white leaves).
-   */
-  public generateWillowTree(voxels: Uint8Array, x: number, y: number, z: number) {
-    const trunkHeight = 5;
-    for (let ty = 0; ty < trunkHeight; ty++) {
-      if (y + ty < CHUNK_SIZE_Y) {
-        this.setVoxel(voxels, x, y + ty, z, BlockType.WILLOW_LOG);
-      }
-    }
-    const leafStart = y + trunkHeight - 2;
-    for (let ly = leafStart; ly <= leafStart + 3; ly++) {
-      if (ly >= CHUNK_SIZE_Y) break;
-      const radius = ly >= leafStart + 2 ? 1 : 2;
-      for (let ox = -radius; ox <= radius; ox++) {
-        for (let oz = -radius; oz <= radius; oz++) {
-          const vx = x + ox;
-          const vz = z + oz;
-          if (ox === 0 && oz === 0 && ly < y + trunkHeight) continue;
-          if (Math.abs(ox) === 2 && Math.abs(oz) === 2 && ly === leafStart + 1) continue;
-          if (this.getVoxel(voxels, vx, ly, vz) === BlockType.AIR) {
-            this.setVoxel(voxels, vx, ly, vz, BlockType.WILLOW_LEAVES);
-          }
-        }
-      }
-    }
-  }
-
-  /**
-   * Generates a Sift Portal structure (Siftstone frame with glowing Sift Portal core).
-   */
-  public generateSiftPortalStructure(voxels: Uint8Array, ox: number, oy: number, oz: number) {
-    // Solid platform under and around the portal
-    for (let px = -1; px <= 4; px++) {
-      for (let pz = -2; pz <= 2; pz++) {
-        this.setVoxel(voxels, ox + px, oy - 1, oz + pz, BlockType.SIFTSTONE);
-      }
-    }
-    for (let dx = 0; dx < 4; dx++) {
-      for (let dy = 0; dy < 5; dy++) {
-        const isBorder = (dx === 0 || dx === 3 || dy === 0 || dy === 4);
-        const block = isBorder ? BlockType.SIFTSTONE : BlockType.SIFT_PORTAL;
-        this.setVoxel(voxels, ox + dx, oy + dy, oz, block);
-      }
-    }
   }
 
   /**
@@ -946,11 +798,6 @@ export class WorldGenerator {
     else if (Math.floor(hash * 5) % 15 === 0) {
       const mineshaftY = 22 + (Math.floor(hash * 11) % 16);
       this.buildMineshaft((x, y, z, b) => this.setVoxel(voxels, x, y, z, b), 2, mineshaftY, 2);
-    }
-
-    // 5. Mystical Sift Portal Shrine (near spawn at chunk 1,0 or scattered across overworld)
-    if ((chunkX === 1 && chunkZ === 0) || (Math.floor(hash * 7) % 24 === 0 && surfaceH > SEA_LEVEL + 1 && surfaceH < 65)) {
-      this.generateSiftPortalStructure(voxels, 4, surfaceH + 1, 4);
     }
   }
 

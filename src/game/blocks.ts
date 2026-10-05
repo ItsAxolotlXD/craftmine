@@ -70,12 +70,6 @@ export enum BlockType {
   MOSS_BLOCK = 64,
   CAVE_VINES = 65,
   DRIPLEAF = 66,
-  SIFTSTONE = 67,
-  SIFT_GRASS = 68,
-  WILLOW_LOG = 69,
-  WILLOW_LEAVES = 70,
-  WILLOW_BUSH = 71,
-  SIFT_PORTAL = 72,
 }
 
 export interface BlockFaceTextures {
@@ -182,14 +176,6 @@ export const ATLAS_INDEX = {
   MOSS_BLOCK: 75,
   CAVE_VINES: 76,
   DRIPLEAF: 77,
-  SIFTSTONE: 78,
-  SIFT_GRASS_TOP: 79,
-  SIFT_GRASS_SIDE: 80,
-  WILLOW_LOG_SIDE: 81,
-  WILLOW_LOG_TOP: 82,
-  WILLOW_LEAVES: 83,
-  WILLOW_BUSH: 84,
-  SIFT_PORTAL: 85,
 };
 
 function sideUniform(idx: number): BlockFaceTextures {
@@ -763,57 +749,6 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
     soundType: 'grass',
     colorHex: '#5b8e3a',
   },
-  [BlockType.SIFTSTONE]: {
-    id: BlockType.SIFTSTONE,
-    name: 'Siftstone',
-    transparent: false,
-    textures: sideUniform(ATLAS_INDEX.SIFTSTONE),
-    soundType: 'stone',
-    colorHex: '#d89aa8',
-  },
-  [BlockType.SIFT_GRASS]: {
-    id: BlockType.SIFT_GRASS,
-    name: 'Sift Grass Block',
-    transparent: false,
-    textures: topSideBottom(ATLAS_INDEX.SIFT_GRASS_TOP, ATLAS_INDEX.SIFT_GRASS_SIDE, ATLAS_INDEX.SIFTSTONE),
-    soundType: 'grass',
-    colorHex: '#ec4899',
-  },
-  [BlockType.WILLOW_LOG]: {
-    id: BlockType.WILLOW_LOG,
-    name: 'Willow Log',
-    transparent: false,
-    textures: topSideBottom(ATLAS_INDEX.WILLOW_LOG_TOP, ATLAS_INDEX.WILLOW_LOG_SIDE, ATLAS_INDEX.WILLOW_LOG_TOP),
-    soundType: 'wood',
-    colorHex: '#e2e8f0',
-  },
-  [BlockType.WILLOW_LEAVES]: {
-    id: BlockType.WILLOW_LEAVES,
-    name: 'Willow Leaves',
-    transparent: true,
-    textures: sideUniform(ATLAS_INDEX.WILLOW_LEAVES),
-    soundType: 'grass',
-    colorHex: '#f1f5f9',
-  },
-  [BlockType.WILLOW_BUSH]: {
-    id: BlockType.WILLOW_BUSH,
-    name: 'Willow Bush',
-    transparent: true,
-    isPassable: true,
-    textures: sideUniform(ATLAS_INDEX.WILLOW_BUSH),
-    soundType: 'grass',
-    colorHex: '#f472b6',
-  },
-  [BlockType.SIFT_PORTAL]: {
-    id: BlockType.SIFT_PORTAL,
-    name: 'Sift Portal',
-    transparent: true,
-    isPassable: true,
-    lightEmission: 14,
-    textures: sideUniform(ATLAS_INDEX.SIFT_PORTAL),
-    soundType: 'glass',
-    colorHex: '#d946ef',
-  },
 };
 
 export function isToolItem(id: BlockType): boolean {
@@ -876,12 +811,6 @@ export function getBlockTextureUrl(id: BlockType): string {
     case BlockType.MOSS_BLOCK: return '/textures/moss_block.png';
     case BlockType.CAVE_VINES: return '/textures/cave_vines.png';
     case BlockType.DRIPLEAF: return '/textures/big_dripleaf_top.png';
-    case BlockType.SIFTSTONE: return '/textures/sift_stone.png';
-    case BlockType.SIFT_GRASS: return '/textures/sift_grass_side.png';
-    case BlockType.FALL_GRASS: return '/textures/grass_side.png';
-    case BlockType.WILLOW_LOG: return '/textures/willow_log.png';
-    case BlockType.WILLOW_LEAVES: return '/textures/willow_leaves.png';
-    case BlockType.WILLOW_BUSH: return '/textures/willow_bush.png';
     default: return '';
   }
 }

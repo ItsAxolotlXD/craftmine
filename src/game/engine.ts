@@ -261,27 +261,16 @@ export class GameEngine {
       this.onUnderwaterChange(this.player.isUnderwater);
     }
 
-    // Check Portal immersion (Nether Portal and Sift Portal)
-    const px = Math.floor(this.player.position.x);
-    const pyFeet = Math.floor(this.player.position.y);
-    const pyBody = Math.floor(this.player.position.y + 0.8);
-    const pz = Math.floor(this.player.position.z);
-    const bFeet = this.world.getBlockAt(px, pyFeet, pz);
-    const bBody = this.world.getBlockAt(px, pyBody, pz);
-
-    const inNetherPortal = (bFeet === BlockType.NETHER_PORTAL || bBody === BlockType.NETHER_PORTAL);
-    const inSiftPortal = (bFeet === BlockType.SIFT_PORTAL || bBody === BlockType.SIFT_PORTAL);
-
-    if (inSiftPortal) {
-      this.portalTimer += dt;
-      if (this.portalTimer > 0.8) {
-        this.portalTimer = -2.5; // Cooldown to avoid bouncing
-        this.toggleSiftDimension();
-      }
-    } else if (inNetherPortal) {
+    // Check Nether Portal immersion
+    const blockUnderPlayer = this.world.getBlockAt(
+      Math.floor(this.player.position.x),
+      Math.floor(this.player.position.y + 0.6),
+      Math.floor(this.player.position.z)
+    );
+    if (blockUnderPlayer === BlockType.NETHER_PORTAL) {
       this.portalTimer += dt;
       if (this.portalTimer > 1.2) {
-        this.portalTimer = -2.5;
+        this.portalTimer = -2.5; // Cooldown to avoid bouncing
         this.toggleDimension();
       }
     } else {
@@ -341,26 +330,6 @@ export class GameEngine {
       this.sunMesh.visible = false;
       this.moonMesh.visible = false;
       (this.starsMesh.material as THREE.PointsMaterial).opacity = 0;
-      return;
-    }
-
-    if (this.world.dimension === 'sift') {
-      // The Sift: ethereal magical floating realm with soft pastel lilac/rose sky and glowing ambient light
-      const siftSky = new THREE.Color(0xf5d0fe);
-      this.scene.background = siftSky;
-      if (this.scene.fog instanceof THREE.FogExp2) {
-        this.scene.fog.color = siftSky;
-        this.scene.fog.density = 0.015;
-      }
-      this.ambientLight.intensity = 0.95;
-      this.ambientLight.color.setHex(0xfce7f3);
-      this.sunLight.intensity = 0.9;
-      this.sunLight.color.setHex(0xfff1f2);
-      this.sunLight.position.set(30, 80, 40);
-      this.sunMesh.visible = false;
-      this.moonMesh.visible = false;
-      const starsMat = this.starsMesh.material as THREE.PointsMaterial;
-      starsMat.opacity = 0.45;
       return;
     }
 
@@ -449,24 +418,6 @@ export class GameEngine {
       const spawn = this.world.getSpawnPosition();
       this.player.position.copy(spawn);
       this.particles.spawnExplosion(spawn.x, spawn.y, spawn.z);
-      this.world.update(this.player.position, 100);
-    }
-  }
-
-  // Toggle dimension between Overworld and The Sift
-  public toggleSiftDimension() {
-    if (this.world.dimension !== 'sift') {
-      this.world.switchDimension('sift');
-      this.player.position.set(8.5, 57.5, 8.5);
-      this.particles.spawnExplosion(8.5, 57.5, 8.5);
-      soundEngine.playBlockBreak();
-      this.world.update(this.player.position, 100);
-    } else {
-      this.world.switchDimension('overworld');
-      const spawn = this.world.getSpawnPosition();
-      this.player.position.copy(spawn);
-      this.particles.spawnExplosion(spawn.x, spawn.y, spawn.z);
-      soundEngine.playBlockBreak();
       this.world.update(this.player.position, 100);
     }
   }

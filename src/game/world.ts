@@ -23,7 +23,7 @@ export class WorldManager implements ChunkNeighborAccessor {
   public waterMaterial: THREE.MeshStandardMaterial;
 
   public renderDistance: number = 3; // Fast, smooth default radius (7x7 chunks)
-  public dimension: 'overworld' | 'nether' | 'sift' = 'overworld';
+  public dimension: 'overworld' | 'nether' = 'overworld';
 
   // Dynamic Torch PointLights (emit light around 20 blocks)
   public torchLights: Map<string, THREE.PointLight> = new Map();
@@ -236,14 +236,9 @@ export class WorldManager implements ChunkNeighborAccessor {
       if (this.chunks.has(key)) continue;
 
       // Generate voxel data based on current dimension
-      let voxels: Uint8Array;
-      if (this.dimension === 'nether') {
-        voxels = this.generator.generateNetherChunk(item.cx, item.cz);
-      } else if (this.dimension === 'sift') {
-        voxels = this.generator.generateSiftChunk(item.cx, item.cz);
-      } else {
-        voxels = this.generator.generateChunkData(item.cx, item.cz);
-      }
+      const voxels = this.dimension === 'nether'
+        ? this.generator.generateNetherChunk(item.cx, item.cz)
+        : this.generator.generateChunkData(item.cx, item.cz);
       const chunk = new Chunk(item.cx, item.cz, voxels);
       this.chunks.set(key, chunk);
 
@@ -375,12 +370,6 @@ export class WorldManager implements ChunkNeighborAccessor {
 
   // Find a safe spawn position in a slightly flat plain biome (never in forest or mountains)
   public getSpawnPosition(): THREE.Vector3 {
-    if (this.dimension === 'sift') {
-      return new THREE.Vector3(8.5, 57.5, 8.5);
-    }
-    if (this.dimension === 'nether') {
-      return new THREE.Vector3(8.5, 33.5, 8.5);
-    }
     let bestX = 8;
     let bestZ = 8;
     let bestH = 43;
@@ -435,8 +424,8 @@ export class WorldManager implements ChunkNeighborAccessor {
     this.loadQueue = [];
   }
 
-  // Switch between Overworld, Nether, and The Sift dimensions
-  public switchDimension(target: 'overworld' | 'nether' | 'sift') {
+  // Switch between Overworld and Nether dimensions
+  public switchDimension(target: 'overworld' | 'nether') {
     this.clearAll();
     this.dimension = target;
   }
@@ -538,21 +527,6 @@ export class WorldManager implements ChunkNeighborAccessor {
         obsidianNeighborCount++;
       }
     }
-    // Check for Siftstone frame to create Sift Portal
-    let siftNeighborCount = 0;
-    for (const [dx, dy, dz] of neighbors) {
-      if (this.getBlockAt(centerX + dx, centerY + dy, centerZ + dz) === BlockType.SIFTSTONE) {
-        siftNeighborCount++;
-      }
-    }
-    if (siftNeighborCount >= 2) {
-      this.setBlockAt(centerX, centerY, centerZ, BlockType.SIFT_PORTAL);
-      if (this.getBlockAt(centerX, centerY + 1, centerZ) === BlockType.AIR) {
-        this.setBlockAt(centerX, centerY + 1, centerZ, BlockType.SIFT_PORTAL);
-      }
-      return true;
-    }
-
     if (obsidianNeighborCount >= 2) {
       this.setBlockAt(centerX, centerY, centerZ, BlockType.NETHER_PORTAL);
       if (this.getBlockAt(centerX, centerY + 1, centerZ) === BlockType.AIR) {
