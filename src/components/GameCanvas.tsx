@@ -443,11 +443,12 @@ export const GameCanvas: React.FC = () => {
     } else if (command === '/locatebiome') {
       const biomeName = args.join(' ').toLowerCase() || args[0]?.toLowerCase();
       if (!biomeName) {
-        addChatMessage('Usage: /locatebiome <desert | fall_forest | mangrove_forest | mountains | ocean | taiga | plains>', '#ffaa00');
+        addChatMessage('Usage: /locatebiome <lush_caves | ice_caves | caves | desert | fall_forest | mangrove_forest | mountains | ocean | taiga | plains>', '#ffaa00');
       } else if (engineRef.current) {
         const result = engineRef.current.locateBiome(biomeName);
         if (result) {
-          addChatMessage(`[Biome] Nearest ${biomeName} is at [X: ${result.x}, Z: ${result.z}] (~${result.dist} blocks away). Type /tp ${result.x} 65 ${result.z} to visit!`, '#55ff55');
+          const tpY = result.y !== undefined ? result.y : 65;
+          addChatMessage(`[Biome] Nearest ${biomeName} is at [X: ${result.x}, Y: ${tpY}, Z: ${result.z}] (~${result.dist} blocks away). Type /tp ${result.x} ${tpY} ${result.z} to visit!`, '#55ff55');
         } else {
           addChatMessage(`[Biome] Could not find biome "${biomeName}" within search radius.`, '#ff5555');
         }

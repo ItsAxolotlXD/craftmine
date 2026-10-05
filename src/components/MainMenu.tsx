@@ -30,21 +30,17 @@ export const MainMenu: React.FC<MainMenuProps> = ({
       {/* Center Container: Logo & Buttons */}
       <div className="relative z-10 flex flex-col items-center w-full max-w-md my-auto">
         {/* <logo>: CRAFTMINE */}
-        <div className="relative mb-10 text-center">
-          <h1
-            className="text-5xl sm:text-7xl font-extrabold tracking-widest text-[#cccccc] font-sans drop-shadow-[0_6px_0_#2b2b2b] uppercase"
-            style={{
-              textShadow: '3px 3px 0 #1b1b1b, -2px -2px 0 #ffffff22, 0 8px 16px rgba(0,0,0,0.9)',
-              letterSpacing: '0.12em',
-            }}
-          >
-            CRAFTMINE
-          </h1>
+        <div className="relative mb-8 text-center flex flex-col items-center">
+          <img
+            src="/craftmine_logo.png"
+            alt="CRAFTMINE"
+            className="w-72 sm:w-96 md:w-[420px] max-w-full h-auto object-contain [image-rendering:pixelated] drop-shadow-[0_8px_16px_rgba(0,0,0,0.9)]"
+          />
 
           {/* Yellow Minecraft Splash Text */}
-          <div className="absolute -bottom-3 right-0 transform rotate-[-12deg] animate-pulse">
-            <span className="bg-yellow-400 text-black px-2 py-0.5 text-xs sm:text-sm font-black tracking-wide rounded-xs shadow-lg uppercase">
-              Desert & Mangrove Forests!
+          <div className="relative -mt-2 sm:-mt-3 transform rotate-[-12deg] animate-pulse self-end mr-4 sm:mr-8 z-20">
+            <span className="bg-yellow-400 text-black px-2 py-0.5 text-xs sm:text-sm font-black tracking-wide rounded-xs shadow-lg uppercase font-minecraft">
+              Infinite 3D Worlds!
             </span>
           </div>
         </div>

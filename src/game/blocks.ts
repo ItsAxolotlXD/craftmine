@@ -59,6 +59,23 @@ export enum BlockType {
   SHOVEL = 53,
   AXE = 54,
   HOE = 55,
+  SNOW_GRASS = 56,
+  PACKED_ICE = 57,
+  BLUE_ICE = 58,
+  CHERRY_LOG = 59,
+  CHERRY_PLANKS = 60,
+  GRANITE = 61,
+  ANDESITE = 62,
+  DIORITE = 63,
+  MOSS_BLOCK = 64,
+  CAVE_VINES = 65,
+  DRIPLEAF = 66,
+  SIFTSTONE = 67,
+  SIFT_GRASS = 68,
+  WILLOW_LOG = 69,
+  WILLOW_LEAVES = 70,
+  WILLOW_BUSH = 71,
+  SIFT_PORTAL = 72,
 }
 
 export interface BlockFaceTextures {
@@ -154,6 +171,25 @@ export const ATLAS_INDEX = {
   TOOL_AXE: 64,
   TOOL_HOE: 65,
   FLINT_AND_STEEL: 66,
+  PACKED_ICE: 67,
+  BLUE_ICE: 68,
+  CHERRY_LOG_SIDE: 69,
+  CHERRY_LOG_TOP: 70,
+  CHERRY_PLANKS: 71,
+  GRANITE: 72,
+  ANDESITE: 73,
+  DIORITE: 74,
+  MOSS_BLOCK: 75,
+  CAVE_VINES: 76,
+  DRIPLEAF: 77,
+  SIFTSTONE: 78,
+  SIFT_GRASS_TOP: 79,
+  SIFT_GRASS_SIDE: 80,
+  WILLOW_LOG_SIDE: 81,
+  WILLOW_LOG_TOP: 82,
+  WILLOW_LEAVES: 83,
+  WILLOW_BUSH: 84,
+  SIFT_PORTAL: 85,
 };
 
 function sideUniform(idx: number): BlockFaceTextures {
@@ -242,7 +278,7 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
   },
   [BlockType.OAK_LOG]: {
     id: BlockType.OAK_LOG,
-    name: 'Oak Wood',
+    name: 'Oak Log',
     transparent: false,
     textures: topSideBottom(ATLAS_INDEX.OAK_LOG_TOP, ATLAS_INDEX.OAK_LOG_SIDE, ATLAS_INDEX.OAK_LOG_TOP),
     soundType: 'wood',
@@ -266,7 +302,7 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
   },
   [BlockType.ICE]: {
     id: BlockType.ICE,
-    name: 'Ice',
+    name: 'Frosted Ice',
     transparent: true,
     textures: sideUniform(ATLAS_INDEX.ICE),
     soundType: 'glass',
@@ -314,7 +350,7 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
   },
   [BlockType.WOOD_PLANK]: {
     id: BlockType.WOOD_PLANK,
-    name: 'Wooden Planks',
+    name: 'Oak Planks',
     transparent: false,
     textures: sideUniform(ATLAS_INDEX.WOOD_PLANK),
     soundType: 'wood',
@@ -381,13 +417,13 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
   },
   [BlockType.MUSHROOM]: {
     id: BlockType.MUSHROOM,
-    name: 'Cave Mushroom',
+    name: 'Red Mushroom',
     transparent: true,
     isPassable: true,
     lightEmission: 6,
     textures: sideUniform(ATLAS_INDEX.MUSHROOM),
     soundType: 'grass',
-    colorHex: '#a52a2a',
+    colorHex: '#b72222',
   },
   [BlockType.LAVA]: {
     id: BlockType.LAVA,
@@ -435,11 +471,11 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
   },
   [BlockType.PINE_LOG]: {
     id: BlockType.PINE_LOG,
-    name: 'Pine Wood',
+    name: 'Oak Log',
     transparent: false,
-    textures: topSideBottom(ATLAS_INDEX.PINE_LOG_TOP, ATLAS_INDEX.PINE_LOG_SIDE, ATLAS_INDEX.PINE_LOG_TOP),
+    textures: topSideBottom(ATLAS_INDEX.OAK_LOG_TOP, ATLAS_INDEX.OAK_LOG_SIDE, ATLAS_INDEX.OAK_LOG_TOP),
     soundType: 'wood',
-    colorHex: '#3e2723',
+    colorHex: '#6d5334',
   },
   [BlockType.PINE_LEAVES]: {
     id: BlockType.PINE_LEAVES,
@@ -636,6 +672,148 @@ export const BLOCK_DEFS: Record<BlockType, BlockDef> = {
     soundType: 'stone',
     colorHex: '#38bdf8',
   },
+  [BlockType.SNOW_GRASS]: {
+    id: BlockType.SNOW_GRASS,
+    name: 'Snowy Grass Block',
+    transparent: false,
+    textures: topSideBottom(ATLAS_INDEX.SNOW_BLOCK, ATLAS_INDEX.SNOW_SIDE, ATLAS_INDEX.DIRT),
+    soundType: 'snow',
+    colorHex: '#f0f4f8',
+  },
+  [BlockType.PACKED_ICE]: {
+    id: BlockType.PACKED_ICE,
+    name: 'Packed Ice',
+    transparent: false,
+    textures: sideUniform(ATLAS_INDEX.PACKED_ICE),
+    soundType: 'glass',
+    colorHex: '#8cbbe2',
+  },
+  [BlockType.BLUE_ICE]: {
+    id: BlockType.BLUE_ICE,
+    name: 'Blue Ice',
+    transparent: false,
+    textures: sideUniform(ATLAS_INDEX.BLUE_ICE),
+    soundType: 'glass',
+    colorHex: '#74a7f0',
+  },
+  [BlockType.CHERRY_LOG]: {
+    id: BlockType.CHERRY_LOG,
+    name: 'Cherry Log',
+    transparent: false,
+    textures: topSideBottom(ATLAS_INDEX.CHERRY_LOG_TOP, ATLAS_INDEX.CHERRY_LOG_SIDE, ATLAS_INDEX.CHERRY_LOG_TOP),
+    soundType: 'wood',
+    colorHex: '#8b4b5c',
+  },
+  [BlockType.CHERRY_PLANKS]: {
+    id: BlockType.CHERRY_PLANKS,
+    name: 'Cherry Planks',
+    transparent: false,
+    textures: sideUniform(ATLAS_INDEX.CHERRY_PLANKS),
+    soundType: 'wood',
+    colorHex: '#e59ca8',
+  },
+  [BlockType.GRANITE]: {
+    id: BlockType.GRANITE,
+    name: 'Granite',
+    transparent: false,
+    textures: sideUniform(ATLAS_INDEX.GRANITE),
+    soundType: 'stone',
+    colorHex: '#956756',
+  },
+  [BlockType.ANDESITE]: {
+    id: BlockType.ANDESITE,
+    name: 'Andesite',
+    transparent: false,
+    textures: sideUniform(ATLAS_INDEX.ANDESITE),
+    soundType: 'stone',
+    colorHex: '#848484',
+  },
+  [BlockType.DIORITE]: {
+    id: BlockType.DIORITE,
+    name: 'Diorite',
+    transparent: false,
+    textures: sideUniform(ATLAS_INDEX.DIORITE),
+    soundType: 'stone',
+    colorHex: '#c0c0c0',
+  },
+  [BlockType.MOSS_BLOCK]: {
+    id: BlockType.MOSS_BLOCK,
+    name: 'Moss Block',
+    transparent: false,
+    textures: sideUniform(ATLAS_INDEX.MOSS_BLOCK),
+    soundType: 'grass',
+    colorHex: '#596e2c',
+  },
+  [BlockType.CAVE_VINES]: {
+    id: BlockType.CAVE_VINES,
+    name: 'Glow Berry Vines',
+    transparent: true,
+    isPassable: true,
+    lightEmission: 12,
+    textures: sideUniform(ATLAS_INDEX.CAVE_VINES),
+    soundType: 'grass',
+    colorHex: '#eab308',
+  },
+  [BlockType.DRIPLEAF]: {
+    id: BlockType.DRIPLEAF,
+    name: 'Big Dripleaf',
+    transparent: true,
+    isPassable: true,
+    textures: sideUniform(ATLAS_INDEX.DRIPLEAF),
+    soundType: 'grass',
+    colorHex: '#5b8e3a',
+  },
+  [BlockType.SIFTSTONE]: {
+    id: BlockType.SIFTSTONE,
+    name: 'Siftstone',
+    transparent: false,
+    textures: sideUniform(ATLAS_INDEX.SIFTSTONE),
+    soundType: 'stone',
+    colorHex: '#d89aa8',
+  },
+  [BlockType.SIFT_GRASS]: {
+    id: BlockType.SIFT_GRASS,
+    name: 'Sift Grass Block',
+    transparent: false,
+    textures: topSideBottom(ATLAS_INDEX.SIFT_GRASS_TOP, ATLAS_INDEX.SIFT_GRASS_SIDE, ATLAS_INDEX.SIFTSTONE),
+    soundType: 'grass',
+    colorHex: '#ec4899',
+  },
+  [BlockType.WILLOW_LOG]: {
+    id: BlockType.WILLOW_LOG,
+    name: 'Willow Log',
+    transparent: false,
+    textures: topSideBottom(ATLAS_INDEX.WILLOW_LOG_TOP, ATLAS_INDEX.WILLOW_LOG_SIDE, ATLAS_INDEX.WILLOW_LOG_TOP),
+    soundType: 'wood',
+    colorHex: '#e2e8f0',
+  },
+  [BlockType.WILLOW_LEAVES]: {
+    id: BlockType.WILLOW_LEAVES,
+    name: 'Willow Leaves',
+    transparent: true,
+    textures: sideUniform(ATLAS_INDEX.WILLOW_LEAVES),
+    soundType: 'grass',
+    colorHex: '#f1f5f9',
+  },
+  [BlockType.WILLOW_BUSH]: {
+    id: BlockType.WILLOW_BUSH,
+    name: 'Willow Bush',
+    transparent: true,
+    isPassable: true,
+    textures: sideUniform(ATLAS_INDEX.WILLOW_BUSH),
+    soundType: 'grass',
+    colorHex: '#f472b6',
+  },
+  [BlockType.SIFT_PORTAL]: {
+    id: BlockType.SIFT_PORTAL,
+    name: 'Sift Portal',
+    transparent: true,
+    isPassable: true,
+    lightEmission: 14,
+    textures: sideUniform(ATLAS_INDEX.SIFT_PORTAL),
+    soundType: 'glass',
+    colorHex: '#d946ef',
+  },
 };
 
 export function isToolItem(id: BlockType): boolean {
@@ -664,8 +842,12 @@ export function getBlockTextureUrl(id: BlockType): string {
     case BlockType.COBBLESTONE: return '/textures/cobblestone.png';
     case BlockType.BEDROCK: return '/textures/bedrock.png';
     case BlockType.SAND: return '/textures/sand.png';
+    case BlockType.GRAVEL: return '/textures/gravel.png';
     case BlockType.WOOD_PLANK: return '/textures/wood_plank.png';
     case BlockType.OAK_LOG: return '/textures/oak_log_side.png';
+    case BlockType.PINE_LOG: return '/textures/oak_log_side.png';
+    case BlockType.CHERRY_LOG: return '/textures/cherry_log_side.png';
+    case BlockType.CHERRY_PLANKS: return '/textures/cherry_planks.png';
     case BlockType.OAK_LEAVES: return '/textures/leaves_oak.png';
     case BlockType.LEAVES_RED: return '/textures/leaves_red.png';
     case BlockType.LEAVES_ORANGE: return '/textures/leaves_orange.png';
@@ -680,9 +862,26 @@ export function getBlockTextureUrl(id: BlockType): string {
     case BlockType.GLOWSTONE: return '/textures/glowstone.png';
     case BlockType.OBSIDIAN: return '/textures/obsidian.png';
     case BlockType.SNOW_BLOCK: return '/textures/snow.png';
+    case BlockType.SNOW_GRASS: return '/textures/snow_side.png';
+    case BlockType.ICE: return '/textures/ice.png';
+    case BlockType.PACKED_ICE: return '/textures/packed_ice.png';
+    case BlockType.BLUE_ICE: return '/textures/blue_ice.png';
+    case BlockType.MUSHROOM: return '/textures/mushroom.png';
     case BlockType.TNT: return '/textures/tnt_side.png';
     case BlockType.FLINT_AND_STEEL: return '/textures/flint_and_steel.png';
     case BlockType.TORCH: return '/textures/torch.png';
+    case BlockType.GRANITE: return '/textures/granite.png';
+    case BlockType.ANDESITE: return '/textures/andesite.png';
+    case BlockType.DIORITE: return '/textures/diorite.png';
+    case BlockType.MOSS_BLOCK: return '/textures/moss_block.png';
+    case BlockType.CAVE_VINES: return '/textures/cave_vines.png';
+    case BlockType.DRIPLEAF: return '/textures/big_dripleaf_top.png';
+    case BlockType.SIFTSTONE: return '/textures/sift_stone.png';
+    case BlockType.SIFT_GRASS: return '/textures/sift_grass_side.png';
+    case BlockType.FALL_GRASS: return '/textures/grass_side.png';
+    case BlockType.WILLOW_LOG: return '/textures/willow_log.png';
+    case BlockType.WILLOW_LEAVES: return '/textures/willow_leaves.png';
+    case BlockType.WILLOW_BUSH: return '/textures/willow_bush.png';
     default: return '';
   }
 }

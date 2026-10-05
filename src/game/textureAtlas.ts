@@ -85,8 +85,28 @@ export class TextureAtlas {
     this.renderBookshelf(ATLAS_INDEX.BOOKSHELF);
     this.renderTNTSide(ATLAS_INDEX.TNT_SIDE);
     this.renderTNTTop(ATLAS_INDEX.TNT_TOP);
-    this.renderPineLogSide(ATLAS_INDEX.PINE_LOG_SIDE);
-    this.renderPineLogTop(ATLAS_INDEX.PINE_LOG_TOP);
+    this.renderOakLogSide(ATLAS_INDEX.PINE_LOG_SIDE);
+    this.renderOakLogTop(ATLAS_INDEX.PINE_LOG_TOP);
+    this.renderCherryLogSide(ATLAS_INDEX.CHERRY_LOG_SIDE);
+    this.renderCherryLogTop(ATLAS_INDEX.CHERRY_LOG_TOP);
+    this.renderCherryPlanks(ATLAS_INDEX.CHERRY_PLANKS);
+    this.renderPackedIce(ATLAS_INDEX.PACKED_ICE);
+    this.renderBlueIce(ATLAS_INDEX.BLUE_ICE);
+    this.renderSnowSide(ATLAS_INDEX.SNOW_SIDE);
+    this.renderGranite(ATLAS_INDEX.GRANITE);
+    this.renderAndesite(ATLAS_INDEX.ANDESITE);
+    this.renderDiorite(ATLAS_INDEX.DIORITE);
+    this.renderMossBlock(ATLAS_INDEX.MOSS_BLOCK);
+    this.renderCaveVines(ATLAS_INDEX.CAVE_VINES);
+    this.renderDripleaf(ATLAS_INDEX.DRIPLEAF);
+    this.renderSiftstone(ATLAS_INDEX.SIFTSTONE);
+    this.renderSiftGrassTop(ATLAS_INDEX.SIFT_GRASS_TOP);
+    this.renderSiftGrassSide(ATLAS_INDEX.SIFT_GRASS_SIDE);
+    this.renderWillowLogSide(ATLAS_INDEX.WILLOW_LOG_SIDE);
+    this.renderWillowLogTop(ATLAS_INDEX.WILLOW_LOG_TOP);
+    this.renderWillowLeaves(ATLAS_INDEX.WILLOW_LEAVES);
+    this.renderWillowBush(ATLAS_INDEX.WILLOW_BUSH);
+    this.renderSiftPortal(ATLAS_INDEX.SIFT_PORTAL);
     this.renderLeaves(ATLAS_INDEX.PINE_LEAVES, '#22482e', '#173621', '#346142');
     this.renderLeaves(ATLAS_INDEX.LEAVES_RED, '#b22222', '#7f1d1d', '#dc2626');
     this.renderLeaves(ATLAS_INDEX.LEAVES_ORANGE, '#d97706', '#b45309', '#f59e0b');
@@ -124,11 +144,14 @@ export class TextureAtlas {
 
   // Load and blit official Minecraft textures with biome grass tint
   private loadOfficialTextures() {
-    const texturesToLoad: { url: string; idx: number; isGrassTop?: boolean }[] = [
+    const texturesToLoad: { url: string; idx: number; tint?: [number, number, number]; tintGrassFringe?: [number, number, number] }[] = [
       { url: '/textures/stone.png', idx: ATLAS_INDEX.STONE },
       { url: '/textures/dirt.png', idx: ATLAS_INDEX.DIRT },
       { url: '/textures/grass_side.png', idx: ATLAS_INDEX.GRASS_SIDE },
-      { url: '/textures/grass_top.png', idx: ATLAS_INDEX.GRASS_TOP, isGrassTop: true },
+      { url: '/textures/grass_side.png', idx: ATLAS_INDEX.FALL_GRASS_SIDE, tintGrassFringe: [224, 76, 28] }, // Fall forest red grass side overlay
+      { url: '/textures/grass_top.png', idx: ATLAS_INDEX.GRASS_TOP, tint: [121, 192, 90] },
+      { url: '/textures/grass_top.png', idx: ATLAS_INDEX.FALL_GRASS_TOP, tint: [224, 76, 28] }, // Fall forest red overlay
+      { url: '/textures/grass_top.png', idx: ATLAS_INDEX.SIFT_GRASS_TOP, tint: [244, 114, 182] }, // Sift grass pink overlay
       { url: '/textures/leaves_oak.png', idx: ATLAS_INDEX.OAK_LEAVES },
       { url: '/textures/leaves_red.png', idx: ATLAS_INDEX.LEAVES_RED },
       { url: '/textures/leaves_orange.png', idx: ATLAS_INDEX.LEAVES_ORANGE },
@@ -136,9 +159,16 @@ export class TextureAtlas {
       { url: '/textures/cobblestone.png', idx: ATLAS_INDEX.COBBLESTONE },
       { url: '/textures/bedrock.png', idx: ATLAS_INDEX.BEDROCK },
       { url: '/textures/sand.png', idx: ATLAS_INDEX.SAND },
+      { url: '/textures/gravel.png', idx: ATLAS_INDEX.GRAVEL },
       { url: '/textures/wood_plank.png', idx: ATLAS_INDEX.WOOD_PLANK },
+      { url: '/textures/cherry_planks.png', idx: ATLAS_INDEX.CHERRY_PLANKS },
       { url: '/textures/oak_log_side.png', idx: ATLAS_INDEX.OAK_LOG_SIDE },
       { url: '/textures/oak_log_top.png', idx: ATLAS_INDEX.OAK_LOG_TOP },
+      { url: '/textures/oak_log_side.png', idx: ATLAS_INDEX.PINE_LOG_SIDE },
+      { url: '/textures/oak_log_top.png', idx: ATLAS_INDEX.PINE_LOG_TOP },
+      { url: '/textures/cherry_log_side.png', idx: ATLAS_INDEX.CHERRY_LOG_SIDE },
+      { url: '/textures/cherry_log_top.png', idx: ATLAS_INDEX.CHERRY_LOG_TOP },
+      { url: '/textures/mushroom.png', idx: ATLAS_INDEX.MUSHROOM },
       { url: '/textures/glass.png', idx: ATLAS_INDEX.GLASS },
       { url: '/textures/brick.png', idx: ATLAS_INDEX.BRICK },
       { url: '/textures/coal_ore.png', idx: ATLAS_INDEX.COAL_ORE },
@@ -149,6 +179,22 @@ export class TextureAtlas {
       { url: '/textures/glowstone.png', idx: ATLAS_INDEX.GLOWSTONE },
       { url: '/textures/obsidian.png', idx: ATLAS_INDEX.OBSIDIAN },
       { url: '/textures/snow.png', idx: ATLAS_INDEX.SNOW_BLOCK },
+      { url: '/textures/snow_side.png', idx: ATLAS_INDEX.SNOW_SIDE },
+      { url: '/textures/ice.png', idx: ATLAS_INDEX.ICE },
+      { url: '/textures/packed_ice.png', idx: ATLAS_INDEX.PACKED_ICE },
+      { url: '/textures/blue_ice.png', idx: ATLAS_INDEX.BLUE_ICE },
+      { url: '/textures/granite.png', idx: ATLAS_INDEX.GRANITE },
+      { url: '/textures/andesite.png', idx: ATLAS_INDEX.ANDESITE },
+      { url: '/textures/diorite.png', idx: ATLAS_INDEX.DIORITE },
+      { url: '/textures/moss_block.png', idx: ATLAS_INDEX.MOSS_BLOCK },
+      { url: '/textures/cave_vines.png', idx: ATLAS_INDEX.CAVE_VINES },
+      { url: '/textures/big_dripleaf_top.png', idx: ATLAS_INDEX.DRIPLEAF },
+      { url: '/textures/sift_grass_side.png', idx: ATLAS_INDEX.SIFT_GRASS_SIDE },
+      { url: '/textures/sift_stone.png', idx: ATLAS_INDEX.SIFTSTONE },
+      { url: '/textures/willow_log.png', idx: ATLAS_INDEX.WILLOW_LOG_SIDE },
+      { url: '/textures/willow_log.png', idx: ATLAS_INDEX.WILLOW_LOG_TOP },
+      { url: '/textures/willow_leaves.png', idx: ATLAS_INDEX.WILLOW_LEAVES },
+      { url: '/textures/willow_bush.png', idx: ATLAS_INDEX.WILLOW_BUSH },
       { url: '/textures/tnt_side.png', idx: ATLAS_INDEX.TNT_SIDE },
       { url: '/textures/tnt_top.png', idx: ATLAS_INDEX.TNT_TOP },
       { url: '/textures/torch.png', idx: ATLAS_INDEX.TORCH },
@@ -159,20 +205,44 @@ export class TextureAtlas {
       img.crossOrigin = 'anonymous';
       img.onload = () => {
         const [tx, ty] = this.getTileCoord(item.idx);
+        this.ctx.imageSmoothingEnabled = false;
         this.ctx.clearRect(tx, ty, 16, 16);
         this.ctx.drawImage(img, tx, ty, 16, 16);
 
-        if (item.isGrassTop) {
-          // Apply biome color overlay to grayscale grass_top (Plains green: #79c05a)
+        if (item.tint) {
           const imgData = this.ctx.getImageData(tx, ty, 16, 16);
           const data = imgData.data;
-          const tintR = 121 / 255;
-          const tintG = 192 / 255;
-          const tintB = 90 / 255;
+          const [tR, tG, tB] = item.tint;
+          const tintR = tR / 255;
+          const tintG = tG / 255;
+          const tintB = tB / 255;
           for (let p = 0; p < data.length; p += 4) {
             data[p] = Math.round(data[p] * tintR);
             data[p + 1] = Math.round(data[p + 1] * tintG);
             data[p + 2] = Math.round(data[p + 2] * tintB);
+          }
+          this.ctx.putImageData(imgData, tx, ty);
+        }
+
+        if (item.tintGrassFringe) {
+          const imgData = this.ctx.getImageData(tx, ty, 16, 16);
+          const data = imgData.data;
+          const [tR, tG, tB] = item.tintGrassFringe;
+          const tintR = tR / 255;
+          const tintG = tG / 255;
+          const tintB = tB / 255;
+          for (let py = 0; py < 16; py++) {
+            for (let px = 0; px < 16; px++) {
+              const p = (py * 16 + px) * 4;
+              const r = data[p];
+              const g = data[p + 1];
+              const b = data[p + 2];
+              if (py <= 5 && (g >= r || (Math.abs(r - g) < 20 && Math.abs(g - b) < 20))) {
+                data[p] = Math.round(r * tintR);
+                data[p + 1] = Math.round(g * tintG);
+                data[p + 2] = Math.round(b * tintB);
+              }
+            }
           }
           this.ctx.putImageData(imgData, tx, ty);
         }
@@ -703,6 +773,305 @@ export class TextureAtlas {
         let c = '#8c704f';
         if (dist > 6) c = '#342318';
         else if (Math.abs(dist - 3.5) < 0.6) c = '#735a3d';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderCherryLogSide(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const n = this.hash2(x, y, 40);
+        const stripe = (x % 3 === 0);
+        let c = stripe ? '#2b1b22' : '#3d252f';
+        if (n > 0.75) c = '#4f303c';
+        else if (n < 0.2) c = '#23151b';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderCherryLogTop(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const dx = x - 7.5;
+        const dy = y - 7.5;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        let c = '#d48796';
+        if (dist > 6) c = '#2b1b22';
+        else if (Math.abs(dist - 3.5) < 0.7) c = '#c26e80';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderCherryPlanks(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    for (let y = 0; y < 16; y++) {
+      const plankRow = Math.floor(y / 4);
+      const isSeam = y % 4 === 3;
+      for (let x = 0; x < 16; x++) {
+        const n = this.hash2(x, y, 41);
+        if (isSeam) {
+          this.ctx.fillStyle = '#9e5668';
+        } else {
+          let c = plankRow % 2 === 0 ? '#d88b9e' : '#cd7f92';
+          if (n > 0.75) c = '#e297a9';
+          else if (n < 0.25) c = '#be7385';
+          this.ctx.fillStyle = c;
+        }
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderSnowSide(idx: number) {
+    this.renderDirt(idx);
+    const [tx, ty] = this.getTileCoord(idx);
+    for (let x = 0; x < 16; x++) {
+      const drop = Math.floor(this.hash2(x, 0, 42) * 3) + 3;
+      for (let y = 0; y <= drop; y++) {
+        const n = this.hash2(x, y, 43);
+        let c = '#f2f5f9';
+        if (y === drop) c = '#d7e2ee';
+        else if (n > 0.7) c = '#ffffff';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderPackedIce(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const n = this.hash2(x, y, 44);
+        let c = '#8db5d8';
+        if (n < 0.2) c = '#7aa2c7';
+        else if (n > 0.8) c = '#a3c7e7';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderBlueIce(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const n = this.hash2(x, y, 45);
+        let c = '#66a4f2';
+        if (n < 0.2) c = '#4f91e4';
+        else if (n > 0.8) c = '#82b9fc';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderGranite(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const n = this.hash2(x, y, 46);
+        let c = '#956756';
+        if (n < 0.2) c = '#815647';
+        else if (n > 0.8) c = '#bd8c78';
+        else if (n > 0.6) c = '#aa7664';
+        else if (n < 0.35) c = '#6c4639';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderAndesite(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const n = this.hash2(x, y, 47);
+        let c = '#848484';
+        if (n < 0.25) c = '#6e6e6e';
+        else if (n > 0.75) c = '#999999';
+        else if (n < 0.45) c = '#595959';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderDiorite(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const n = this.hash2(x, y, 48);
+        let c = '#c5c5c5';
+        if (n < 0.2) c = '#5a5a5a';
+        else if (n < 0.4) c = '#8f8f8f';
+        else if (n > 0.85) c = '#f0f0f0';
+        else if (n > 0.65) c = '#dedede';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderMossBlock(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const n = this.hash2(x, y, 49);
+        let c = '#596e2c';
+        if (n < 0.2) c = '#475822';
+        else if (n > 0.8) c = '#6d8636';
+        else if (n > 0.6) c = '#536829';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderCaveVines(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    this.ctx.clearRect(tx, ty, 16, 16);
+    // Vertical vine stem
+    this.ctx.fillStyle = '#4c7324';
+    this.ctx.fillRect(tx + 7, ty, 2, 16);
+    this.ctx.fillRect(tx + 6, ty + 4, 1, 3);
+    this.ctx.fillRect(tx + 9, ty + 10, 1, 3);
+    // Glowing golden-orange berries
+    this.ctx.fillStyle = '#f59e0b';
+    this.ctx.fillRect(tx + 5, ty + 3, 3, 3);
+    this.ctx.fillRect(tx + 8, ty + 9, 3, 3);
+    this.ctx.fillStyle = '#fef08a';
+    this.ctx.fillRect(tx + 6, ty + 4, 1, 1);
+    this.ctx.fillRect(tx + 9, ty + 10, 1, 1);
+  }
+
+  private renderDripleaf(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    this.ctx.clearRect(tx, ty, 16, 16);
+    // Stalk
+    this.ctx.fillStyle = '#4d7c28';
+    this.ctx.fillRect(tx + 7, ty + 6, 2, 10);
+    // Big green leaf paddle
+    this.ctx.fillStyle = '#65a30d';
+    this.ctx.fillRect(tx + 2, ty + 2, 12, 5);
+    this.ctx.fillStyle = '#84cc16';
+    this.ctx.fillRect(tx + 3, ty + 1, 10, 2);
+    this.ctx.fillStyle = '#3f6212';
+    this.ctx.fillRect(tx + 2, ty + 6, 12, 1);
+  }
+
+  private renderSiftstone(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const n = this.hash2(x, y, 61);
+        let c = '#d89aa8';
+        if (n < 0.2) c = '#c48594';
+        else if (n > 0.8) c = '#eab8c4';
+        else if (n > 0.6) c = '#e2abb8';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderSiftGrassSide(idx: number) {
+    this.renderSiftstone(idx);
+    const [tx, ty] = this.getTileCoord(idx);
+    for (let x = 0; x < 16; x++) {
+      const drop = Math.floor(this.hash2(x, 0, 62) * 3) + 3;
+      for (let y = 0; y <= drop; y++) {
+        const n = this.hash2(x, y, 63);
+        let c = '#f472b6';
+        if (y === drop) c = '#db2777';
+        else if (n > 0.75) c = '#f9a8d4';
+        else if (n < 0.25) c = '#ec4899';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderSiftGrassTop(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const n = this.hash2(x, y, 64);
+        let c = '#f472b6';
+        if (n < 0.2) c = '#ec4899';
+        else if (n > 0.8) c = '#fbcfe8';
+        else if (n > 0.6) c = '#f9a8d4';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderWillowLogSide(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const n = this.hash2(x, y, 65);
+        let c = '#e2e8f0';
+        if (n < 0.2) c = '#cbd5e1';
+        else if (n > 0.8) c = '#f8fafc';
+        else if (n < 0.4 && x % 4 === 0) c = '#94a3b8';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderWillowLogTop(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const dx = x - 7.5;
+        const dy = y - 7.5;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        let c = '#f1f5f9';
+        if (dist > 6) c = '#cbd5e1';
+        else if (Math.abs(dist - 3.5) < 0.7) c = '#e2e8f0';
+        this.ctx.fillStyle = c;
+        this.ctx.fillRect(tx + x, ty + y, 1, 1);
+      }
+    }
+  }
+
+  private renderWillowLeaves(idx: number) {
+    this.renderLeaves(idx, '#f8fafc', '#e2e8f0', '#ffffff');
+  }
+
+  private renderWillowBush(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    this.ctx.clearRect(tx, ty, 16, 16);
+    for (let i = 0; i < 9; i++) {
+      const bx = 3 + (i % 3) * 4;
+      const h = 5 + Math.floor(this.hash2(i, 0, 66) * 9);
+      for (let y = 16 - h; y < 16; y++) {
+        this.ctx.fillStyle = y < 16 - h + 3 ? '#f9a8d4' : '#ec4899';
+        this.ctx.fillRect(tx + bx, ty + y, 2, 1);
+      }
+    }
+  }
+
+  private renderSiftPortal(idx: number) {
+    const [tx, ty] = this.getTileCoord(idx);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const n = this.hash2(x, y, 67);
+        let c = '#d946ef';
+        if (n < 0.25) c = '#a855f7';
+        else if (n > 0.8) c = '#f472b6';
+        else if (n > 0.6) c = '#e879f9';
         this.ctx.fillStyle = c;
         this.ctx.fillRect(tx + x, ty + y, 1, 1);
       }

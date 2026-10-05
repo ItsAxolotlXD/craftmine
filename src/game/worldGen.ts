@@ -16,6 +16,12 @@ export enum BiomeType {
   TAIGA = 'taiga',
 }
 
+export enum CaveBiomeType {
+  REGULAR = 'caves_regular',
+  ICE = 'ice_caves',
+  LUSH = 'lush_caves',
+}
+
 export interface BiomeInfo {
   name: string;
   type: BiomeType;
@@ -44,9 +50,13 @@ export class WorldGenerator {
    * Evaluates the biome at world coordinates (x, z).
    */
   public getBiomeAt(x: number, z: number): BiomeType {
-    const cont = (this.noise.noise2D(x * 0.0016, z * 0.0016) + 1.0) * 0.5;
-    if (cont < 0.32) return BiomeType.OCEAN;
-    if (cont > 0.52) return BiomeType.MOUNTAINS;
+    // Multi-octave continental noise + harmonic wave ensuring truly infinite landmasses & interspersed seas
+    const c1 = this.noise.noise2D(x * 0.003, z * 0.003);
+    const c2 = this.noise.noise2D(x * 0.0075 + 100, z * 0.0075 + 100) * 0.35;
+    const wave = (Math.sin(x * 0.0018) + Math.cos(z * 0.0018)) * 0.20;
+    const cont = c1 + c2 + wave;
+    if (cont < -0.54) return BiomeType.OCEAN;
+    if (cont > 0.42) return BiomeType.MOUNTAINS;
 
     // Biome climate maps
     const temp = this.noise.noise2D(x * 0.0022 + 200, z * 0.0022 + 200);
@@ -84,7 +94,10 @@ export class WorldGenerator {
     biome: BiomeType;
   } {
     const biome = this.getBiomeAt(x, z);
-    const cont = (this.noise.noise2D(x * 0.0016, z * 0.0016) + 1.0) * 0.5;
+    const c1 = this.noise.noise2D(x * 0.003, z * 0.003);
+    const c2 = this.noise.noise2D(x * 0.0075 + 100, z * 0.0075 + 100) * 0.35;
+    const wave = (Math.sin(x * 0.0018) + Math.cos(z * 0.0018)) * 0.20;
+    const cont = c1 + c2 + wave;
     const baseH = 43 + this.noise.fbm2D(x * 0.006, z * 0.006, 3, 2.0, 0.5) * 8;
 
     let h = baseH;
@@ -92,10 +105,10 @@ export class WorldGenerator {
     let isOcean = (biome === BiomeType.OCEAN);
 
     if (isOcean) {
-      const oceanDepth = Math.pow((0.32 - cont) / 0.32, 1.3) * 26;
-      h = Math.max(16, baseH - oceanDepth - 10);
+      const oceanDepth = Math.pow(Math.max(0, (-0.54 - cont) / 0.46), 1.2) * 18;
+      h = Math.max(22, baseH - oceanDepth - 6);
     } else if (isMountain) {
-      const mWeight = Math.min(1.0, (cont - 0.44) / 0.22);
+      const mWeight = Math.min(1.0, (cont - 0.35) / 0.25);
       const ridge = this.noise.ridged2D(x * 0.0055, z * 0.0055, 4, 2.0, 0.55);
       const peaks = Math.pow(Math.max(0, ridge), 1.8) * 58;
       h += peaks * mWeight;
@@ -142,28 +155,109 @@ export class WorldGenerator {
     };
   }
 
+  // Deterministic 3D coordinate hash returning [0..1)
+  private hash3D(x: number, y: number, z: number, offset: number = 0): number {
+    let h = (x * 374761393 + y * 668265263 + z * 1013904223 + this.seed + offset) ^ 0x5bf03635;
+    h = Math.imul(h ^ (h >>> 15), 0x85ebca6b);
+    h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+  }
+
+  /**
+   * Evaluates the cave biome at world coordinates (x, y, z).
+   */
+  public getCaveBiome(x: number, y: number, z: number): CaveBiomeType {
+    const temp = this.noise.noise2D(x * 0.005 + 500, z * 0.005 + 500);
+    const lush = this.noise.noise2D(x * 0.006 + 1200, z * 0.006 + 1200);
+    if (temp < -0.22) return CaveBiomeType.ICE;
+    if (lush > 0.12) return CaveBiomeType.LUSH;
+    return CaveBiomeType.REGULAR;
+  }
+
+  /**
+   * Deterministic Granite, Andesite, Diorite vein clusters (each group has 20 - 30 blocks).
+   */
+  public getRockVein(wx: number, y: number, wz: number): BlockType | null {
+    if (y < 4 || y > 115) return null;
+    const S = 14;
+    const cx = Math.floor(wx / S);
+    const cy = Math.floor(y / S);
+    const cz = Math.floor(wz / S);
+
+    // ~72% of spatial cells contain a rock vein
+    const cellHash = this.hash3D(cx, cy, cz, 101);
+    if (cellHash > 0.72) return null;
+
+    const ox = (this.hash3D(cx, cy, cz, 102) * 0.6 + 0.2) * S;
+    const oy = (this.hash3D(cx, cy, cz, 103) * 0.6 + 0.2) * S;
+    const oz = (this.hash3D(cx, cy, cz, 104) * 0.6 + 0.2) * S;
+    const centerX = cx * S + ox;
+    const centerY = cy * S + oy;
+    const centerZ = cz * S + oz;
+
+    const dx = wx - centerX;
+    const dy = (y - centerY) * 1.12;
+    const dz = wz - centerZ;
+    const distSq = dx * dx + dy * dy + dz * dz;
+
+    // Radius tuned to yield 20 to 30 blocks per group
+    const targetR = 1.84 + this.hash3D(cx, cy, cz, 105) * 0.12;
+    const jitter = this.noise.noise3D(wx * 0.35, y * 0.35, wz * 0.35) * 0.10;
+    const effR = targetR + jitter;
+
+    if (distSq <= effR * effR) {
+      const typeHash = this.hash3D(cx, cy, cz, 106);
+      if (typeHash < 0.34) return BlockType.GRANITE;
+      if (typeHash < 0.67) return BlockType.ANDESITE;
+      return BlockType.DIORITE;
+    }
+
+    return null;
+  }
+
+  /**
+   * Balanced cave generation with natural caverns, tunnels, and ravines.
+   * Decreased from overly massive size to well-proportioned, comfortable grottos and tunnels.
+   */
   public isCave(x: number, y: number, z: number, terrainH: number): boolean {
     if (y <= 2) return false;
     if (y >= terrainH) return false;
 
     const depthBelowSurface = terrainH - y;
-    if (depthBelowSurface < 3 && y >= SEA_LEVEL) {
-      const entranceNoise = this.noise.noise2D(x * 0.04, z * 0.04);
-      if (entranceNoise < 0.7) return false;
+    // Cave entrances piercing mountain cliffs, hills, and ravines
+    if (depthBelowSurface < 5 && y >= SEA_LEVEL) {
+      const entranceNoise = this.noise.noise2D(x * 0.035, z * 0.035);
+      if (entranceNoise < 0.72) return false;
     }
 
-    const c1 = Math.abs(this.noise.noise3D(x * 0.024, y * 0.038, z * 0.024));
-    const c2 = Math.abs(this.noise.noise3D(x * 0.024 + 100, y * 0.038 + 100, z * 0.024 + 100));
-    if (c1 < 0.065 && c2 < 0.065) return true;
-
-    if (y < 46 && y > 6) {
-      const cavern = this.noise.noise3D(x * 0.014, y * 0.02, z * 0.014);
-      if (cavern > 0.48) return true;
+    // 1. Vaulted Cavern Rooms (tuned size: spacious 6-12 blocks high, not massive voids)
+    if (y >= 8 && y <= 46) {
+      const cavern = this.noise.noise3D(x * 0.022, y * 0.028, z * 0.022);
+      const depthBonus = Math.max(0, (40 - y) * 0.002);
+      if (cavern + depthBonus > 0.52) {
+        const pillar = Math.abs(this.noise.noise2D(x * 0.045, z * 0.045));
+        if (!(cavern < 0.60 && pillar < 0.05)) {
+          return true;
+        }
+      }
     }
 
-    if (y >= 45 && y < terrainH - 4) {
-      const ravine = Math.abs(this.noise.noise3D(x * 0.018, y * 0.012, z * 0.018));
-      if (ravine < 0.035) return true;
+    // 2. Winding Cave Tunnels (Natural 3-5 block wide pathways)
+    const c1 = this.noise.noise3D(x * 0.024, y * 0.036, z * 0.024);
+    const c2 = this.noise.noise3D(x * 0.024 + 120, y * 0.036 + 120, z * 0.024 + 120);
+    const widthNoise = this.noise.noise3D(x * 0.018 + 60, y * 0.018 + 60, z * 0.018 + 60);
+    const radiusSq = 0.0034 + Math.max(0, widthNoise * 0.0020);
+    if ((c1 * c1 + c2 * c2) < radiusSq) {
+      return true;
+    }
+
+    // 3. Fissure Ravines
+    if (y >= 14 && y < terrainH - 6) {
+      const ravine = Math.abs(this.noise.noise3D(x * 0.016, y * 0.012, z * 0.016));
+      if (ravine < 0.016) {
+        const ravineW = Math.abs(this.noise.noise2D(x * 0.022 + 80, z * 0.022 + 80));
+        if (ravineW > 0.38) return true;
+      }
     }
 
     return false;
@@ -215,8 +309,15 @@ export class WorldGenerator {
 
           const isCarvedCave = (y <= surfaceH) && this.isCave(wx, y, wz, surfaceH);
           if (isCarvedCave) {
+            const caveBiome = this.getCaveBiome(wx, y, wz);
             if (y <= 8) {
-              this.setVoxel(voxels, lx, y, lz, BlockType.LAVA);
+              if (caveBiome === CaveBiomeType.ICE) {
+                this.setVoxel(voxels, lx, y, lz, y <= 7 ? BlockType.BLUE_ICE : BlockType.PACKED_ICE);
+              } else if (caveBiome === CaveBiomeType.LUSH) {
+                this.setVoxel(voxels, lx, y, lz, BlockType.WATER);
+              } else {
+                this.setVoxel(voxels, lx, y, lz, BlockType.LAVA);
+              }
             } else {
               this.setVoxel(voxels, lx, y, lz, BlockType.AIR);
             }
@@ -249,7 +350,7 @@ export class WorldGenerator {
               this.setVoxel(voxels, lx, y, lz, BlockType.SNOW_BLOCK);
             } else if (biome === BiomeType.MOUNTAINS && y >= 64) {
               const cliffNoise = this.noise.noise2D(wx * 0.1, wz * 0.1);
-              this.setVoxel(voxels, lx, y, lz, cliffNoise > 0.1 ? BlockType.STONE : BlockType.SNOW_BLOCK);
+              this.setVoxel(voxels, lx, y, lz, cliffNoise > 0.1 ? BlockType.STONE : BlockType.SNOW_GRASS);
             } else {
               this.setVoxel(voxels, lx, y, lz, BlockType.GRASS);
             }
@@ -267,20 +368,67 @@ export class WorldGenerator {
               this.setVoxel(voxels, lx, y, lz, BlockType.DIRT);
             }
           } else {
-            // Deep stone & ores
-            let block = BlockType.STONE;
-            const oreNoise = this.noise.noise3D(wx * 0.12, y * 0.12, wz * 0.12);
+            // Deep stone, cave perimeter & ores
+            const caveBiome = this.getCaveBiome(wx, y, wz);
+            const isNearCave = (
+              this.isCave(wx, y + 1, wz, surfaceH) ||
+              this.isCave(wx, y - 1, wz, surfaceH) ||
+              this.isCave(wx + 1, y, wz, surfaceH) ||
+              this.isCave(wx - 1, y, wz, surfaceH) ||
+              this.isCave(wx, y, wz + 1, surfaceH) ||
+              this.isCave(wx, y, wz - 1, surfaceH)
+            );
 
-            if (y <= 16 && oreNoise > 0.68) {
-              block = BlockType.DIAMOND_ORE;
-            } else if (y <= 24 && oreNoise > 0.65) {
-              block = BlockType.GOLD_ORE;
-            } else if (y <= 32 && oreNoise > 0.62) {
-              block = BlockType.EMERALD_ORE;
-            } else if (y <= 50 && oreNoise > 0.54) {
-              block = BlockType.IRON_ORE;
-            } else if (oreNoise > 0.52) {
-              block = BlockType.COAL_ORE;
+            let block: BlockType = BlockType.STONE;
+
+            if (isNearCave) {
+              const isFloor = this.isCave(wx, y + 1, wz, surfaceH);
+              if (caveBiome === CaveBiomeType.LUSH) {
+                // Lush cave walls and mossy floors
+                const mossNoise = this.noise.noise3D(wx * 0.25, y * 0.25, wz * 0.25);
+                if (isFloor) {
+                  block = mossNoise > -0.25 ? BlockType.MOSS_BLOCK : BlockType.GRASS;
+                } else if (mossNoise > 0.08) {
+                  block = BlockType.MOSS_BLOCK;
+                } else if (mossNoise < -0.42) {
+                  block = BlockType.CLAY;
+                }
+              } else if (caveBiome === CaveBiomeType.ICE) {
+                // Ice cave walls and floor
+                const iceNoise = this.noise.noise3D(wx * 0.22, y * 0.22, wz * 0.22);
+                if (iceNoise > 0.35) {
+                  block = BlockType.BLUE_ICE;
+                } else if (iceNoise > 0.05) {
+                  block = BlockType.PACKED_ICE;
+                } else if (iceNoise > -0.28) {
+                  block = BlockType.ICE;
+                } else {
+                  block = BlockType.SNOW_BLOCK;
+                }
+              }
+            }
+
+            // If not transformed by cave biome, check ores and granite/andesite/diorite veins
+            if (block === BlockType.STONE) {
+              const oreNoise = this.noise.noise3D(wx * 0.12, y * 0.12, wz * 0.12);
+
+              if (y <= 16 && oreNoise > 0.68) {
+                block = BlockType.DIAMOND_ORE;
+              } else if (y <= 24 && oreNoise > 0.65) {
+                block = BlockType.GOLD_ORE;
+              } else if (y <= 32 && oreNoise > 0.62) {
+                block = BlockType.EMERALD_ORE;
+              } else if (y <= 50 && oreNoise > 0.54) {
+                block = BlockType.IRON_ORE;
+              } else if (oreNoise > 0.52) {
+                block = BlockType.COAL_ORE;
+              } else {
+                // Granite, andesite, diorite vein clusters (20 - 30 blocks each group)
+                const vein = this.getRockVein(wx, y, wz);
+                if (vein) {
+                  block = vein;
+                }
+              }
             }
 
             this.setVoxel(voxels, lx, y, lz, block);
@@ -330,7 +478,7 @@ export class WorldGenerator {
           }
 
           // 4. Plains & Mountains Trees
-          else if ((topBlock === BlockType.GRASS || topBlock === BlockType.SNOW_BLOCK) && lx >= 2 && lx <= 13 && lz >= 2 && lz <= 13) {
+          else if ((topBlock === BlockType.GRASS || topBlock === BlockType.SNOW_BLOCK || topBlock === BlockType.SNOW_GRASS) && lx >= 2 && lx <= 13 && lz >= 2 && lz <= 13) {
             const treeHash = Math.abs(this.noise.noise2D(wx * 0.35 + 20, wz * 0.35 + 20));
             const isTreeSpot = biome === BiomeType.MOUNTAINS
               ? (treeHash > 0.85 && surfaceH < 78)
@@ -342,21 +490,126 @@ export class WorldGenerator {
               } else {
                 const variantNoise = this.noise.noise2D(wx * 0.1, wz * 0.1);
                 let leafType = BlockType.OAK_LEAVES;
-                if (variantNoise > 0.5) leafType = BlockType.LEAVES_CHERRY;
-                this.generateDeciduousTree(voxels, lx, surfaceH + 1, lz, leafType);
+                let logType = BlockType.OAK_LOG;
+                if (variantNoise > 0.5) {
+                  leafType = BlockType.LEAVES_CHERRY;
+                  logType = BlockType.CHERRY_LOG;
+                }
+                this.generateDeciduousTree(voxels, lx, surfaceH + 1, lz, leafType, logType);
               }
             }
           }
         }
 
-        // Subterranean glowing mushrooms inside caves
-        for (let y = 6; y < 40; y++) {
+        // Subterranean Cave Biome Decoration (Vines, Dripleaf, Ponds, Icicles, Mushrooms)
+        for (let y = 4; y < surfaceH - 1; y++) {
           if (this.getVoxel(voxels, lx, y, lz) === BlockType.AIR) {
             const blockBelow = this.getVoxel(voxels, lx, y - 1, lz);
-            if (blockBelow === BlockType.STONE || blockBelow === BlockType.DIRT) {
-              const shroomNoise = this.noise.noise3D(wx * 0.4, y * 0.4, wz * 0.4);
-              if (shroomNoise > 0.76) {
-                this.setVoxel(voxels, lx, y, lz, BlockType.MUSHROOM);
+            const blockAbove = this.getVoxel(voxels, lx, y + 1, lz);
+            const caveBiome = this.getCaveBiome(wx, y, wz);
+
+            if (caveBiome === CaveBiomeType.LUSH) {
+              // 1. Water ponds with clay in depressions
+              if ((blockBelow === BlockType.MOSS_BLOCK || blockBelow === BlockType.STONE || blockBelow === BlockType.CLAY || blockBelow === BlockType.DIRT) && y <= 35) {
+                const pondNoise = this.noise.noise2D(wx * 0.15 + 40, wz * 0.15 + 40);
+                if (pondNoise > 0.65) {
+                  this.setVoxel(voxels, lx, y, lz, BlockType.WATER);
+                  this.setVoxel(voxels, lx, y - 1, lz, BlockType.CLAY);
+                  continue;
+                }
+              }
+
+              // 2. Glow Berry Vines hanging from ceilings (emits light)
+              if (blockAbove === BlockType.MOSS_BLOCK || blockAbove === BlockType.STONE || blockAbove === BlockType.CLAY) {
+                const vineNoise = this.noise.noise3D(wx * 0.28, y * 0.28, wz * 0.28);
+                if (vineNoise > 0.38) {
+                  const vineLen = Math.floor(Math.abs(this.noise.noise2D(wx * 0.5, wz * 0.5)) * 3) + 1;
+                  for (let v = 0; v < vineLen; v++) {
+                    if (y - v > 4 && this.getVoxel(voxels, lx, y - v, lz) === BlockType.AIR) {
+                      this.setVoxel(voxels, lx, y - v, lz, BlockType.CAVE_VINES);
+                    } else {
+                      break;
+                    }
+                  }
+                  continue;
+                }
+              }
+
+              // 3. Big Dripleaf plants growing from floor
+              if (blockBelow === BlockType.MOSS_BLOCK || blockBelow === BlockType.GRASS || blockBelow === BlockType.CLAY) {
+                const dripNoise = this.noise.noise2D(wx * 0.35 + 80, wz * 0.35 + 80);
+                if (dripNoise > 0.64) {
+                  this.setVoxel(voxels, lx, y, lz, BlockType.DRIPLEAF);
+                  if (this.getVoxel(voxels, lx, y + 1, lz) === BlockType.AIR && dripNoise > 0.82) {
+                    this.setVoxel(voxels, lx, y + 1, lz, BlockType.DRIPLEAF);
+                  }
+                  continue;
+                }
+
+                // 4. Cave Mushrooms on moss
+                const shroomNoise = this.noise.noise2D(wx * 0.4 + 120, wz * 0.4 + 120);
+                if (shroomNoise > 0.72) {
+                  this.setVoxel(voxels, lx, y, lz, BlockType.MUSHROOM);
+                  continue;
+                }
+              }
+            } else if (caveBiome === CaveBiomeType.ICE) {
+              // 1. Hanging Stalactite Icicles (1 - 15 blocks long)
+              if (blockAbove === BlockType.ICE || blockAbove === BlockType.PACKED_ICE || blockAbove === BlockType.BLUE_ICE || blockAbove === BlockType.STONE || blockAbove === BlockType.SNOW_BLOCK) {
+                const icicleNoise = Math.abs(this.noise.noise2D(wx * 0.45 + 11, wz * 0.45 + 11));
+                if (icicleNoise > 0.48) {
+                  // Measure clear vertical space below
+                  let space = 0;
+                  while (y - space > 4 && this.getVoxel(voxels, lx, y - space, lz) === BlockType.AIR && space < 16) {
+                    space++;
+                  }
+                  if (space >= 2) {
+                    const icicleLen = Math.max(1, Math.min(15, Math.min(space - 1, Math.floor(icicleNoise * 18) - 7)));
+                    for (let s = 0; s < icicleLen; s++) {
+                      let iceBlock = BlockType.ICE;
+                      if (s === 0) iceBlock = (icicleNoise > 0.75) ? BlockType.BLUE_ICE : BlockType.PACKED_ICE;
+                      this.setVoxel(voxels, lx, y - s, lz, iceBlock);
+                    }
+                    continue;
+                  }
+                }
+              }
+
+              // 2. Rising Stalagmite Icicles (1 - 15 blocks long)
+              if (blockBelow === BlockType.ICE || blockBelow === BlockType.PACKED_ICE || blockBelow === BlockType.BLUE_ICE || blockBelow === BlockType.STONE || blockBelow === BlockType.SNOW_BLOCK) {
+                const stalagNoise = Math.abs(this.noise.noise2D(wx * 0.45 + 88, wz * 0.45 + 88));
+                if (stalagNoise > 0.50) {
+                  // Measure clear vertical space above
+                  let space = 0;
+                  while (y + space < surfaceH - 1 && this.getVoxel(voxels, lx, y + space, lz) === BlockType.AIR && space < 16) {
+                    space++;
+                  }
+                  if (space >= 2) {
+                    const stalagLen = Math.max(1, Math.min(15, Math.min(space - 1, Math.floor(stalagNoise * 18) - 7)));
+                    for (let s = 0; s < stalagLen; s++) {
+                      let iceBlock = BlockType.ICE;
+                      if (s === 0) iceBlock = (stalagNoise > 0.72) ? BlockType.BLUE_ICE : BlockType.PACKED_ICE;
+                      this.setVoxel(voxels, lx, y + s, lz, iceBlock);
+                    }
+                    continue;
+                  }
+                }
+
+                // Snow on cold ledges
+                const snowNoise = this.noise.noise2D(wx * 0.3, wz * 0.3);
+                if (snowNoise > 0.65) {
+                  this.setVoxel(voxels, lx, y, lz, BlockType.SNOW_BLOCK);
+                  continue;
+                }
+              }
+            } else {
+              // Regular Caves: glowing red mushrooms on stone/dirt ledges
+              if (blockBelow === BlockType.STONE || blockBelow === BlockType.DIRT || blockBelow === BlockType.COBBLESTONE) {
+                const shroomNoise = this.noise.noise3D(wx * 0.4, y * 0.4, wz * 0.4);
+                if (shroomNoise > 0.76) {
+                  this.setVoxel(voxels, lx, y, lz, BlockType.MUSHROOM);
+                  continue;
+                }
               }
             }
           }
@@ -442,6 +695,116 @@ export class WorldGenerator {
   }
 
   /**
+   * Generates a 3D "The Sift" dimension chunk with floating archipelago islands.
+   */
+  public generateSiftChunk(chunkX: number, chunkZ: number): Uint8Array {
+    const voxels = new Uint8Array(CHUNK_SIZE_X * CHUNK_SIZE_Z * CHUNK_SIZE_Y);
+    const worldStartX = chunkX * CHUNK_SIZE_X;
+    const worldStartZ = chunkZ * CHUNK_SIZE_Z;
+
+    for (let lz = 0; lz < CHUNK_SIZE_Z; lz++) {
+      for (let lx = 0; lx < CHUNK_SIZE_X; lx++) {
+        const wx = worldStartX + lx;
+        const wz = worldStartZ + lz;
+
+        // Floating Islands 3D noise (centered around y = 52)
+        for (let y = 30; y < 80; y++) {
+          const islandNoise = this.noise.noise3D(wx * 0.016, (y - 52) * 0.035, wz * 0.016);
+          const vDist = Math.abs(y - 52) / 22;
+          const density = islandNoise - Math.pow(vDist, 1.85);
+
+          // Center origin chunk (0,0) has guaranteed main island!
+          const isOrigin = (chunkX === 0 && chunkZ === 0);
+          const originBonus = isOrigin && (y >= 45 && y <= 56) && (lx >= 2 && lx <= 13 && lz >= 2 && lz <= 13) ? 0.35 : 0;
+
+          if (density + originBonus > 0.08) {
+            this.setVoxel(voxels, lx, y, lz, BlockType.SIFTSTONE);
+          }
+        }
+
+        // Top surface conversion: Topmost solid block becomes SIFT_GRASS
+        for (let y = 79; y >= 30; y--) {
+          if (this.getVoxel(voxels, lx, y, lz) === BlockType.SIFTSTONE) {
+            const above = this.getVoxel(voxels, lx, y + 1, lz);
+            if (above === BlockType.AIR) {
+              this.setVoxel(voxels, lx, y, lz, BlockType.SIFT_GRASS);
+
+              // Flora on top of Sift Grass (Willow Bush)
+              const floraNoise = Math.abs(this.noise.noise2D(wx * 0.35 + 50, wz * 0.35 + 50));
+              if (floraNoise > 0.62) {
+                this.setVoxel(voxels, lx, y + 1, lz, BlockType.WILLOW_BUSH);
+              }
+
+              // Willow Trees (White wood and white leaves)
+              if (lx >= 2 && lx <= 13 && lz >= 2 && lz <= 13) {
+                const treeNoise = Math.abs(this.noise.noise2D(wx * 0.22 + 88, wz * 0.22 + 88));
+                if (treeNoise > 0.84) {
+                  this.generateWillowTree(voxels, lx, y + 1, lz);
+                }
+              }
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // Origin island portal in The Sift
+    if (chunkX === 0 && chunkZ === 0) {
+      this.generateSiftPortalStructure(voxels, 6, 56, 6);
+    }
+
+    return voxels;
+  }
+
+  /**
+   * Generates a Willow Tree in The Sift (white wood trunk, luminous white leaves).
+   */
+  public generateWillowTree(voxels: Uint8Array, x: number, y: number, z: number) {
+    const trunkHeight = 5;
+    for (let ty = 0; ty < trunkHeight; ty++) {
+      if (y + ty < CHUNK_SIZE_Y) {
+        this.setVoxel(voxels, x, y + ty, z, BlockType.WILLOW_LOG);
+      }
+    }
+    const leafStart = y + trunkHeight - 2;
+    for (let ly = leafStart; ly <= leafStart + 3; ly++) {
+      if (ly >= CHUNK_SIZE_Y) break;
+      const radius = ly >= leafStart + 2 ? 1 : 2;
+      for (let ox = -radius; ox <= radius; ox++) {
+        for (let oz = -radius; oz <= radius; oz++) {
+          const vx = x + ox;
+          const vz = z + oz;
+          if (ox === 0 && oz === 0 && ly < y + trunkHeight) continue;
+          if (Math.abs(ox) === 2 && Math.abs(oz) === 2 && ly === leafStart + 1) continue;
+          if (this.getVoxel(voxels, vx, ly, vz) === BlockType.AIR) {
+            this.setVoxel(voxels, vx, ly, vz, BlockType.WILLOW_LEAVES);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Generates a Sift Portal structure (Siftstone frame with glowing Sift Portal core).
+   */
+  public generateSiftPortalStructure(voxels: Uint8Array, ox: number, oy: number, oz: number) {
+    // Solid platform under and around the portal
+    for (let px = -1; px <= 4; px++) {
+      for (let pz = -2; pz <= 2; pz++) {
+        this.setVoxel(voxels, ox + px, oy - 1, oz + pz, BlockType.SIFTSTONE);
+      }
+    }
+    for (let dx = 0; dx < 4; dx++) {
+      for (let dy = 0; dy < 5; dy++) {
+        const isBorder = (dx === 0 || dx === 3 || dy === 0 || dy === 4);
+        const block = isBorder ? BlockType.SIFTSTONE : BlockType.SIFT_PORTAL;
+        this.setVoxel(voxels, ox + dx, oy + dy, oz, block);
+      }
+    }
+  }
+
+  /**
    * Generates a complete 4x5 Nether Portal structure in a chunk.
    */
   public generatePortalStructure(voxels: Uint8Array, ox: number, oy: number, oz: number) {
@@ -489,11 +852,18 @@ export class WorldGenerator {
   }
 
   // Standard Deciduous Tree
-  private generateDeciduousTree(voxels: Uint8Array, x: number, y: number, z: number, leafType: BlockType = BlockType.OAK_LEAVES) {
+  private generateDeciduousTree(
+    voxels: Uint8Array,
+    x: number,
+    y: number,
+    z: number,
+    leafType: BlockType = BlockType.OAK_LEAVES,
+    logType: BlockType = BlockType.OAK_LOG
+  ) {
     const trunkHeight = 5;
     for (let ty = 0; ty < trunkHeight; ty++) {
       if (y + ty < CHUNK_SIZE_Y) {
-        this.setVoxel(voxels, x, y + ty, z, BlockType.OAK_LOG);
+        this.setVoxel(voxels, x, y + ty, z, logType);
       }
     }
     const leafStart = y + trunkHeight - 2;
@@ -514,12 +884,12 @@ export class WorldGenerator {
     }
   }
 
-  // Conical Pine Tree
+  // Conical Pine Tree (pine wood changed to Oak Log)
   private generatePineTree(voxels: Uint8Array, x: number, y: number, z: number) {
     const trunkHeight = 7;
     for (let ty = 0; ty < trunkHeight; ty++) {
       if (y + ty < CHUNK_SIZE_Y) {
-        this.setVoxel(voxels, x, y + ty, z, BlockType.PINE_LOG);
+        this.setVoxel(voxels, x, y + ty, z, BlockType.OAK_LOG);
       }
     }
     const leafStart = y + 2;
@@ -576,6 +946,11 @@ export class WorldGenerator {
     else if (Math.floor(hash * 5) % 15 === 0) {
       const mineshaftY = 22 + (Math.floor(hash * 11) % 16);
       this.buildMineshaft((x, y, z, b) => this.setVoxel(voxels, x, y, z, b), 2, mineshaftY, 2);
+    }
+
+    // 5. Mystical Sift Portal Shrine (near spawn at chunk 1,0 or scattered across overworld)
+    if ((chunkX === 1 && chunkZ === 0) || (Math.floor(hash * 7) % 24 === 0 && surfaceH > SEA_LEVEL + 1 && surfaceH < 65)) {
+      this.generateSiftPortalStructure(voxels, 4, surfaceH + 1, 4);
     }
   }
 
@@ -772,10 +1147,40 @@ export class WorldGenerator {
   }
 
   /**
-   * Locates the nearest occurrence of a specified biome.
+   * Locates the nearest occurrence of a specified surface or cave biome.
    */
-  public locateBiome(biomeName: string, startX: number, startZ: number): { x: number; z: number; dist: number } | null {
+  public locateBiome(biomeName: string, startX: number, startZ: number): { x: number; z: number; dist: number; y?: number } | null {
     const target = biomeName.toLowerCase().trim();
+    const step = 24;
+    const maxDist = 1200;
+
+    // Check for cave biomes
+    if (target.includes('lush')) {
+      for (let r = step; r <= maxDist; r += step) {
+        for (let angle = 0; angle < Math.PI * 2; angle += 0.35) {
+          const x = Math.round(startX + Math.cos(angle) * r);
+          const z = Math.round(startZ + Math.sin(angle) * r);
+          if (this.getCaveBiome(x, 25, z) === CaveBiomeType.LUSH) {
+            return { x, z, dist: Math.round(r), y: 25 };
+          }
+        }
+      }
+      return null;
+    }
+
+    if (target.includes('ice_cave') || target.includes('ice cave') || (target.includes('ice') && target.includes('cave'))) {
+      for (let r = step; r <= maxDist; r += step) {
+        for (let angle = 0; angle < Math.PI * 2; angle += 0.35) {
+          const x = Math.round(startX + Math.cos(angle) * r);
+          const z = Math.round(startZ + Math.sin(angle) * r);
+          if (this.getCaveBiome(x, 25, z) === CaveBiomeType.ICE) {
+            return { x, z, dist: Math.round(r), y: 25 };
+          }
+        }
+      }
+      return null;
+    }
+
     let targetType: BiomeType | null = null;
 
     if (target.includes('desert')) targetType = BiomeType.DESERT;
@@ -789,9 +1194,6 @@ export class WorldGenerator {
     if (!targetType) return null;
 
     // Spiral search outward in 24-block steps up to radius 1200
-    const step = 24;
-    const maxDist = 1200;
-
     for (let r = step; r <= maxDist; r += step) {
       for (let angle = 0; angle < Math.PI * 2; angle += 0.35) {
         const x = Math.round(startX + Math.cos(angle) * r);
